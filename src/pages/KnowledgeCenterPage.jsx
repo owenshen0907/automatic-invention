@@ -6,6 +6,7 @@ import {
     Typography,
     Snackbar,
     Alert,
+    MenuItem, // 新增导入 MenuItem 组件
     Button,
     CircularProgress,
 } from '@mui/material';
@@ -129,6 +130,10 @@ const KnowledgeCenterPage = () => {
         setKnowledgeBases(updatedKnowledgeBases);
         setCachedData(updatedKnowledgeBases); // 更新缓存
     };
+    const [selectedModel, setSelectedModel] = useState(''); // 用于存储选中的所属模型
+    const handleModelChange = (event) => {
+        setSelectedModel(event.target.value);
+    };
 
     // 处理更新知识库
     const handleUpdateKnowledgeBase = (updatedKB) => {
@@ -156,6 +161,8 @@ const KnowledgeCenterPage = () => {
         setKnowledgeBases([]);
         fetchKnowledgeBases();
     };
+
+
 
     // 移除与侧边栏相关的函数
     // const handlePipelineChange = useCallback((newPipeline) => {

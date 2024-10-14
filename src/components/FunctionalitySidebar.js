@@ -9,9 +9,8 @@ import {
     InputLabel,
     Select,
     MenuItem,
-    Checkbox,
-    ListItemText,
     FormControlLabel,
+    Checkbox,
 } from '@mui/material';
 import { styled } from '@mui/system';
 
@@ -34,7 +33,7 @@ const FunctionalitySidebar = ({
                                   onKnowledgeBaseChange = () => {},
                               }) => {
     console.log('FunctionalitySidebar - knowledgeBases:', knowledgeBases);
-    const [selectedKBs, setSelectedKBs] = useState([]);
+    const [selectedKB, setSelectedKB] = useState('');
     const [pipelineOptions, setPipelineOptions] = useState([]);
 
     // 加载 Pipeline 选项
@@ -61,14 +60,11 @@ const FunctionalitySidebar = ({
     }, [selectedPipeline, onPipelineChange]);
 
     const handleKBChange = (event) => {
-        const {
-            target: { value },
-        } = event;
-        const newSelectedKBs = typeof value === 'string' ? value.split(',') : value;
-        setSelectedKBs(newSelectedKBs);
+        const value = event.target.value;
+        setSelectedKB(value);
 
         if (onKnowledgeBaseChange) {
-            onKnowledgeBaseChange(newSelectedKBs);
+            onKnowledgeBaseChange(value);
         }
     };
 
@@ -110,23 +106,13 @@ const FunctionalitySidebar = ({
                     <InputLabel id="knowledge-base-select-label">选择知识库</InputLabel>
                     <Select
                         labelId="knowledge-base-select-label"
-                        multiple
-                        value={selectedKBs}
+                        value={selectedKB}
                         onChange={handleKBChange}
-                        renderValue={(selected) =>
-                            selected
-                                .map((id) => {
-                                    const kb = knowledgeBases.find((k) => k.id === id);
-                                    return kb ? kb.name : '';
-                                })
-                                .join(', ')
-                        }
                         label="选择知识库"
                     >
                         {knowledgeBases.map((kb) => (
                             <MenuItem key={kb.id} value={kb.id}>
-                                <Checkbox checked={selectedKBs.indexOf(kb.id) > -1} />
-                                <ListItemText primary={kb.display_name} />
+                                {kb.display_name}
                             </MenuItem>
                         ))}
                     </Select>
@@ -161,8 +147,11 @@ const FunctionalitySidebar = ({
 FunctionalitySidebar.propTypes = {
     knowledgeBases: PropTypes.arrayOf(
         PropTypes.shape({
-            id: PropTypes.number.isRequired,
+            id: PropTypes.string.isRequired, // 假设 id 是字符串，如果是数字请改为 PropTypes.number
             name: PropTypes.string.isRequired,
+            display_name: PropTypes.string.isRequired, // 添加 display_name
+            description: PropTypes.string.isRequired, // 添加 description
+            tags: PropTypes.string.isRequired, // 添加 tags
         })
     ),
     selectedPipeline: PropTypes.string,

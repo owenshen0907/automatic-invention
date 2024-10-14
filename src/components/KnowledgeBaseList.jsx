@@ -153,7 +153,7 @@ const KnowledgeBaseList = ({
                                 <Typography variant="h6" component="div" gutterBottom>
                                     {kb.display_name}
                                     <Typography component="span" variant="subtitle2" color="text.secondary">
-                                        {' '}({kb.name})
+                                        {' '}({kb.name})({kb.id})
                                     </Typography>
                                 </Typography>
                                 <Typography
@@ -190,6 +190,15 @@ const KnowledgeBaseList = ({
                                     pt: 0,
                                 }}
                             >
+                                {/* 所属模型和创建者 ID 显示 */}
+                                <Box sx={{ display: 'flex', alignItems: 'left' }}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ mr: 2 }}>
+                                        模型: {kb.model_owner || '未知模型'}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        创建者ID: {kb.creator_id || '未知创建者'}
+                                    </Typography>
+                                </Box>
                                 <IconButton onClick={() => onEditKnowledgeBase(kb)} color="primary" size="small" aria-label="edit">
                                     <EditIcon fontSize="small" />
                                 </IconButton>

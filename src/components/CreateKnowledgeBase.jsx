@@ -9,7 +9,12 @@ import {
     DialogActions as MuiDialogActions,
     Box,
     Button,
-    CircularProgress
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
+    CircularProgress,
+    Typography // Import Typography
 } from '@mui/material';
 import axios from 'axios';
 
@@ -26,6 +31,7 @@ const CreateKnowledgeBase = ({
     const [newKnowledgeBaseDescription, setNewKnowledgeBaseDescription] = useState('');
     const [newTag, setNewTag] = useState('');
     const [tags, setTags] = useState([]);
+    const [selectedModel, setSelectedModel] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleAddTag = () => {
@@ -68,6 +74,10 @@ const CreateKnowledgeBase = ({
         setTags(updatedTags);
     };
 
+    const handleModelChange = (event) => {
+        setSelectedModel(event.target.value);
+    };
+
     const handleCreateKnowledgeBase = async () => {
         if (!newKnowledgeBaseIdentifier.trim()) {
             setSnackbarMessage('知识库标识不能为空');
@@ -107,6 +117,13 @@ const CreateKnowledgeBase = ({
             }
         }
 
+        if (!selectedModel) {
+            setSnackbarMessage('请选择所属模型');
+            setSnackbarSeverity('error');
+            setSnackbarOpen(true);
+            return;
+        }
+
         try {
             setLoading(true);
             const apiUrl = process.env.REACT_APP_API_BASE_URL;
@@ -114,21 +131,24 @@ const CreateKnowledgeBase = ({
                 name: newKnowledgeBaseIdentifier.trim(),
                 display_name: newKnowledgeBaseDisplayName.trim(),
                 description: newKnowledgeBaseDescription.trim(),
-                tags: tags.join(',')
+                tags: tags.join(','),
+                model_owner: selectedModel
             });
-            if (response.status === 200) {
+            if (response.status === 200 || response.status === 201) {
                 const newKnowledgeBase = response.data;
                 onAddKnowledgeBase({
                     id: newKnowledgeBase.id,
                     name: newKnowledgeBase.name,
                     display_name: newKnowledgeBase.display_name,
                     description: newKnowledgeBase.description,
-                    tags: newKnowledgeBase.tags || ""
+                    tags: newKnowledgeBase.tags || "",
+                    model_owner: newKnowledgeBase.model_owner
                 });
                 setNewKnowledgeBaseIdentifier('');
                 setNewKnowledgeBaseDisplayName('');
                 setNewKnowledgeBaseDescription('');
                 setTags([]);
+                setSelectedModel('');
                 onClose();
                 setSnackbarMessage('知识库创建成功');
                 setSnackbarSeverity('success');
@@ -153,33 +173,66 @@ const CreateKnowledgeBase = ({
             setNewKnowledgeBaseDescription('');
             setTags([]);
             setNewTag('');
+            setSelectedModel('');
         }
     };
 
     return (
         <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
             <DialogTitle>创建知识库</DialogTitle>
+            {/* Added Instruction Prompt */}
             <DialogContent>
-                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                    根据【所属模型】到指定模型供应商创建知识库
+                </Typography>
+                <Box
+                    sx={{
+                        display: 'flex',
+                        gap: 2,
+                        flexWrap: 'nowrap', // Prevent wrapping
+                        alignItems: 'flex-start',
+                        mt: 2
+                    }}
+                >
+                    {/* 所属模型选择框 */}
+                    <FormControl
+                        margin="dense"
+                        variant="outlined"
+                        required
+                        sx={{flex: 1, minWidth: 200 }}
+                    >
+                        <InputLabel id="select-model-label">所属模型 *</InputLabel>
+                        <Select
+                            labelId="select-model-label"
+                            value={selectedModel}
+                            onChange={handleModelChange}
+                            label="所属模型 *"
+                        >
+                            <MenuItem value="stepfun">stepfun</MenuItem>
+                            <MenuItem value="zhipu">zhipu</MenuItem>
+                            <MenuItem value="moonshot">moonshot</MenuItem>
+                            <MenuItem value="baichuan">baichuan</MenuItem>
+                        </Select>
+                    </FormControl>
                     <TextField
                         margin="dense"
-                        label="知识库名称"
+                        label="知识库名称 *"
                         type="text"
                         value={newKnowledgeBaseDisplayName}
                         onChange={(e) => setNewKnowledgeBaseDisplayName(e.target.value)}
                         helperText="必填项"
                         required
-                        sx={{ flex: 1, minWidth: '200px' }}
+                        sx={{ flex: 1, minWidth: 200 }}
                     />
                     <TextField
                         margin="dense"
-                        label="知识库标识"
+                        label="知识库标识 *"
                         type="text"
                         value={newKnowledgeBaseIdentifier}
                         onChange={(e) => setNewKnowledgeBaseIdentifier(e.target.value)}
                         helperText="只能包含字母、数字和下划线，且不能以下划线开头"
                         required
-                        sx={{ flex: 1, minWidth: '200px' }}
+                        sx={{ flex: 1, minWidth: 200 }}
                     />
                 </Box>
                 <TextField

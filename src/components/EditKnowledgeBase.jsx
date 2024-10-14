@@ -9,7 +9,8 @@ import {
     DialogActions as MuiDialogActions,
     Box,
     Button,
-    CircularProgress
+    CircularProgress,
+    Typography,
 } from '@mui/material';
 import axios from 'axios';
 
@@ -26,6 +27,7 @@ const EditKnowledgeBase = ({
     const [displayName, setDisplayName] = useState('');
     const [description, setDescription] = useState('');
     const [tags, setTags] = useState([]);
+    const [modelOwner, setModelOwner] = useState('');
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -34,12 +36,26 @@ const EditKnowledgeBase = ({
             setDisplayName(knowledgeBase.display_name || '');
             setDescription(knowledgeBase.description || '');
             setTags(knowledgeBase.tags ? knowledgeBase.tags.split(',') : []);
+            setModelOwner(knowledgeBase.model_owner || ''); // 初始化 modelOwner
         }
     }, [knowledgeBase]);
 
+    // 添加标签的处理函数
+    const handleTagChange = (event) => {
+        if (event.key === 'Enter' && event.target.value.trim()) {
+            setTags((prevTags) => [...prevTags, event.target.value.trim()]);
+            event.target.value = ''; // 添加标签后清空输入框
+        }
+    };
+
+    // 删除标签的处理函数
+    const handleDeleteTag = (tagToDelete) => {
+        setTags((prevTags) => prevTags.filter((tag) => tag !== tagToDelete));
+    };
+
     const handleSave = async () => {
-        if (!identifier.trim()) {
-            setSnackbarMessage('知识库标识不能为空');
+        if (!displayName.trim()) {
+            setSnackbarMessage('知识库名称不能为空');
             setSnackbarSeverity('error');
             setSnackbarOpen(true);
             return;
@@ -53,21 +69,13 @@ const EditKnowledgeBase = ({
             return;
         }
 
-        if (!displayName.trim()) {
-            setSnackbarMessage('知识库名称不能为空');
-            setSnackbarSeverity('error');
-            setSnackbarOpen(true);
-            return;
-        }
-
         try {
             setLoading(true);
             const apiUrl = process.env.REACT_APP_API_BASE_URL;
             const response = await axios.put(`${apiUrl}/api/update-vector-store/${knowledgeBase.id}`, {
-                name: identifier.trim(),
                 display_name: displayName.trim(),
                 description: description.trim(),
-                // tags 不可编辑，因此不发送 tags
+                tags: tags.join(','), // 保存时包含标签
             });
             if (response.status === 200) {
                 const updatedKB = response.data;
@@ -76,7 +84,8 @@ const EditKnowledgeBase = ({
                     name: updatedKB.name,
                     display_name: updatedKB.display_name,
                     description: updatedKB.description,
-                    tags: updatedKB.tags || ""
+                    tags: updatedKB.tags || "",
+                    model_owner: modelOwner, // 保持原有的 model_owner
                 });
                 onClose();
                 setSnackbarMessage('知识库更新成功');
@@ -102,6 +111,7 @@ const EditKnowledgeBase = ({
                 setDisplayName(knowledgeBase.display_name || '');
                 setDescription(knowledgeBase.description || '');
                 setTags(knowledgeBase.tags ? knowledgeBase.tags.split(',') : []);
+                setModelOwner(knowledgeBase.model_owner || ''); // 重置所属模型
             }
         }
     };
@@ -126,7 +136,7 @@ const EditKnowledgeBase = ({
                         label="知识库标识"
                         type="text"
                         value={identifier}
-                        onChange={(e) => setIdentifier(e.target.value)}
+                        InputProps={{ readOnly: true }} // 设置标识为只读
                         helperText="只能包含字母、数字和下划线，且不能以下划线开头"
                         required
                         sx={{ flex: 1, minWidth: '200px' }}
@@ -145,11 +155,10 @@ const EditKnowledgeBase = ({
                 />
                 <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
                     <TextField
-                        label="标签"
-                        value={''}
+                        label="添加标签"
+                        placeholder="按回车添加标签"
+                        onKeyDown={handleTagChange}
                         size="small"
-                        disabled
-                        helperText="标签为只读"
                     />
                 </Box>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', mt: 2 }}>
@@ -157,9 +166,16 @@ const EditKnowledgeBase = ({
                         <Chip
                             key={index}
                             label={tag}
+                            onDelete={() => handleDeleteTag(tag)} // 添加删除功能
                             sx={{ margin: 0.5 }}
                         />
                     ))}
+                </Box>
+                {/* 所属模型只读显示 */}
+                <Box sx={{ mt: 2 }}>
+                    <Typography variant="subtitle1" color="text.secondary">
+                        所属模型: {modelOwner || '未知模型'}
+                    </Typography>
                 </Box>
             </DialogContent>
             <MuiDialogActions>

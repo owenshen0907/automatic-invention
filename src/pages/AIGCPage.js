@@ -18,6 +18,7 @@ const AIGCPage = () => {
 
     // 新增 knowledgeBases 状态
     const [knowledgeBases, setKnowledgeBases] = useState([]);
+    const [selectedKB, setSelectedKB] = useState(''); // 新增：选中的知识库 ID
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [snackbarSeverity, setSnackbarSeverity] = useState('success');
@@ -87,13 +88,23 @@ const AIGCPage = () => {
         fetchKnowledgeBases();
     }, [fetchKnowledgeBases]);
 
+
     const handlePipelineChange = (pipeline) => {
         setSelectedPipeline(pipeline);
+    };
+
+    // 新增：处理知识库选择变化
+    const handleKnowledgeBaseChange = (selectedKBId) => {
+        setSelectedKB(selectedKBId);
+        console.log('Selected Knowledge Base ID:', selectedKBId);
     };
 
     const handleSend = async (inputValue, selectedFile) => {
         if (inputValue.trim() === '' && !selectedFile) {
             // 可以添加提示用户输入内容或选择文件
+            setSnackbarMessage('请输入内容或选择文件后再发送。');
+            setSnackbarSeverity('warning');
+            setSnackbarOpen(true);
             return;
         }
 
@@ -116,6 +127,13 @@ const AIGCPage = () => {
                 fileUrl = await uploadFileAndGetUrl(selectedFile); // 实现文件上传逻辑
                 console.log('文件上传完成，URL:', fileUrl);
             }
+            // 获取选中的知识库详情
+            const selectedKnowledgeBase = knowledgeBases.find(kb => kb.id === selectedKB);
+            if (!selectedKnowledgeBase) {
+                throw new Error('选中的知识库不存在，请重新选择。');
+            }
+
+            //构建调用 API的请求数据
 
             const data = {
                 inputs: {},
@@ -123,6 +141,10 @@ const AIGCPage = () => {
                 response_mode: "streaming",
                 conversation_id: "",
                 user: "abc-123",
+                name: selectedKnowledgeBase.name, // 确保字段之间有逗号
+                description: selectedKnowledgeBase.description,
+                tags: "",
+                vector_store_id: selectedKB, // 添加 vector_store_id
                 files: selectedFile
                     ? [
                         {
@@ -255,6 +277,9 @@ const AIGCPage = () => {
     const handleCloseError = () => {
         setError(null);
     };
+    const handleCloseSnackbar = () => {
+        setSnackbarOpen(false);
+    };
 
     return (
         <Box sx={{ display: 'flex', flexGrow: 1, height: '100vh', overflow: 'hidden' }}>
@@ -297,13 +322,19 @@ const AIGCPage = () => {
                     knowledgeBases={knowledgeBases} // 确保传递了 knowledgeBases
                     selectedPipeline={selectedPipeline}
                     onPipelineChange={handlePipelineChange}
-                    // 如果需要，传递 onKnowledgeBaseChange
+                    onKnowledgeBaseChange={handleKnowledgeBaseChange} // 传递知识库变化回调
                 />
             </Paper>
             {/* 错误提示 */}
             <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseError}>
                 <Alert onClose={handleCloseError} severity="error" sx={{ width: '100%' }}>
                     {error}
+                </Alert>
+            </Snackbar>
+            {/* 成功提示 */}
+            <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={() => setSnackbarOpen(false)}>
+                <Alert onClose={() => setSnackbarOpen(false)} severity={snackbarSeverity} sx={{ width: '100%' }}>
+                    {snackbarMessage}
                 </Alert>
             </Snackbar>
         </Box>
