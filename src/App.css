@@ -1,3 +1,6 @@
+/* src/App.css */
+
+/* 保持现有样式，必要时进行调整 */
 .App {
   text-align: center;
 }
@@ -15,7 +18,7 @@
 
 .App-header {
   background-color: #282c34;
-  min-height: 100vh;
+  /* 移除 min-height: 100vh 以避免与主布局冲突 */
   display: flex;
   flex-direction: column;
   align-items: center;

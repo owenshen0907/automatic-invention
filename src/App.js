@@ -1,25 +1,27 @@
-import logo from './logo.svg';
-import './App.css';
+// src/App.js
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { CssBaseline } from '@mui/material';
+import Layout from './components/Layout';
+import AIGCPage from './pages/AIGCPage';
+import NotePage from './pages/NotePage';
+import KnowledgeCenterPage from './pages/KnowledgeCenterPage';
 
 function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+    return (
+        <Router>
+            <CssBaseline />
+            <Layout>
+                <Routes>
+                    <Route path="/" element={<Navigate to="/aigc" />} />
+                    <Route path="/aigc" element={<AIGCPage />} />
+                    <Route path="/note" element={<NotePage />} />
+                    <Route path="/knowledge-center" element={<KnowledgeCenterPage />} />
+                    {/* 其他路由 */}
+                </Routes>
+            </Layout>
+        </Router>
+    );
 }
 
 export default App;
