@@ -1,5 +1,5 @@
 // src/components/KnowledgeBaseList.jsx
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
     Box,
     Typography,
@@ -7,15 +7,12 @@ import {
     Card,
     CardContent,
     Chip,
-    IconButton,
-    LinearProgress
+    IconButton
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
-import axios from 'axios'; // 确保安装了 axios: npm install axios
-
-const MAX_FILE_SIZE = 64 * 1024 * 1024; // 64MB
+import UploadFileDialog from './UploadFileDialog'; // 引入 UploadFileDialog
 
 const KnowledgeBaseList = ({
                                knowledgeBases,
@@ -26,79 +23,26 @@ const KnowledgeBaseList = ({
                                setSnackbarSeverity,
                                setSnackbarOpen
                            }) => {
-    // 状态用于跟踪当前选择的知识库进行上传
+    // 状态用于控制上传对话框的显示和记录选中的知识库
+    const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
     const [selectedKBForUpload, setSelectedKBForUpload] = useState(null);
-    const fileInputRef = useRef(null);
-    const [uploadProgress, setUploadProgress] = useState(0); // 上传进度
 
-    // 上传文件的函数
-    const handleUploadFile = (kb) => {
+    // 处理上传对话框的打开
+    const handleOpenUploadDialog = (kb) => {
         setSelectedKBForUpload(kb);
-        if (fileInputRef.current) {
-            fileInputRef.current.value = null; // 重置文件输入
-            fileInputRef.current.click(); // 触发文件选择对话框
-        }
+        setIsUploadDialogOpen(true);
     };
 
-    // 处理文件选择并上传
-    const handleFileChange = async (event) => {
-        const file = event.target.files[0];
-        if (!file) return; // 用户取消了选择
+    // 处理上传对话框的关闭
+    const handleCloseUploadDialog = () => {
+        setIsUploadDialogOpen(false);
+        setSelectedKBForUpload(null);
+    };
 
-        if (!selectedKBForUpload) {
-            setSnackbarMessage('未选择知识库进行上传');
-            setSnackbarSeverity('error');
-            setSnackbarOpen(true);
-            return;
-        }
-
-        // 检查文件大小
-        if (file.size > MAX_FILE_SIZE) {
-            setSnackbarMessage('文件大小超过限制（64MB）');
-            setSnackbarSeverity('error');
-            setSnackbarOpen(true);
-            return;
-        }
-
-        // 创建 FormData 对象
-        const formData = new FormData();
-        formData.append('vector_store_id', selectedKBForUpload.id);
-        formData.append('file', file);
-
-        try {
-            setSnackbarMessage(`正在上传文件到知识库: ${selectedKBForUpload.display_name}`);
-            setSnackbarSeverity('info');
-            setSnackbarOpen(true);
-            setUploadProgress(0); // 重置上传进度
-
-            // 发送 POST 请求到后端上传文件
-            const response = await axios.post(`${process.env.REACT_APP_API_BASE_URL}/api/knowledge-upload-file`, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-                onUploadProgress: (progressEvent) => {
-                    const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                    setUploadProgress(percentCompleted);
-                },
-            });
-
-            // 处理成功响应
-            setSnackbarMessage(`文件上传成功: ${response.data.id}`);
-            setSnackbarSeverity('success');
-            setSnackbarOpen(true);
-
-            // 可选：触发父组件或上下文更新，刷新知识库列表或文件列表
-            // 例如：如果有获取知识库详情的函数，可以调用它来刷新数据
-
-        } catch (error) {
-            console.error('上传文件失败:', error);
-            setSnackbarMessage(`文件上传失败: ${error.response?.data?.error || error.message}`);
-            setSnackbarSeverity('error');
-            setSnackbarOpen(true);
-        } finally {
-            setSelectedKBForUpload(null);
-            setUploadProgress(0);
-        }
+    // 上传成功后的回调
+    const handleFileUploaded = () => {
+        // 这里可以添加刷新知识库列表或其他逻辑
+        // 例如，触发父组件重新获取知识库数据
     };
 
     return (
@@ -108,14 +52,18 @@ const KnowledgeBaseList = ({
                 p: { xs: 1, sm: 2, md: 3 } // 响应式内边距
             }}
         >
-            {/* 隐藏的文件输入 */}
-            <input
-                type="file"
-                style={{ display: 'none' }}
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept=".md,.txt,.pdf,.doc,.docx" // 根据需要调整接受的文件类型
-            />
+            {/* UploadFileDialog 组件 */}
+            {selectedKBForUpload && (
+                <UploadFileDialog
+                    open={isUploadDialogOpen}
+                    onClose={handleCloseUploadDialog}
+                    knowledgeBaseId={selectedKBForUpload.id} // 传入知识库的ID
+                    setSnackbarMessage={setSnackbarMessage}
+                    setSnackbarSeverity={setSnackbarSeverity}
+                    setSnackbarOpen={setSnackbarOpen}
+                    onFileUploaded={handleFileUploaded} // 上传成功后的回调
+                />
+            )}
 
             {/* KnowledgeBaseList 内容 */}
             <Grid
@@ -205,19 +153,10 @@ const KnowledgeBaseList = ({
                                 <IconButton onClick={() => onSelectKnowledgeBase(kb)} color="secondary" size="small" aria-label="manage">
                                     <ManageAccountsIcon fontSize="small" />
                                 </IconButton>
-                                <IconButton onClick={() => handleUploadFile(kb)} color="default" size="small" aria-label="upload">
+                                <IconButton onClick={() => handleOpenUploadDialog(kb)} color="default" size="small" aria-label="upload">
                                     <UploadFileIcon fontSize="small" />
                                 </IconButton>
                             </Box>
-                            {/* 显示上传进度条 */}
-                            {uploadProgress > 0 && uploadProgress < 100 && selectedKBForUpload?.id === kb.id && (
-                                <Box sx={{ width: '100%', p: 1 }}>
-                                    <LinearProgress variant="determinate" value={uploadProgress} />
-                                    <Typography variant="caption" color="text.secondary">
-                                        上传进度: {uploadProgress}%
-                                    </Typography>
-                                </Box>
-                            )}
                         </Card>
                     </Grid>
                 ))}

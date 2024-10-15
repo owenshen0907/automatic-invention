@@ -183,7 +183,7 @@ const CreateKnowledgeBase = ({
             {/* Added Instruction Prompt */}
             <DialogContent>
                 <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                    根据【所属模型】到指定模型供应商创建知识库
+                    【所属模型】支持阶跃，智普，月之暗面，百川提供的知识库接口。自定义：可以自选向量模型，并支持基于文件的RAG。
                 </Typography>
                 <Box
                     sx={{
@@ -212,6 +212,7 @@ const CreateKnowledgeBase = ({
                             <MenuItem value="zhipu">zhipu</MenuItem>
                             <MenuItem value="moonshot">moonshot</MenuItem>
                             <MenuItem value="baichuan">baichuan</MenuItem>
+                            <MenuItem value="local">自定义</MenuItem>
                         </Select>
                     </FormControl>
                     <TextField

@@ -163,18 +163,6 @@ const KnowledgeCenterPage = () => {
     };
 
 
-
-    // 移除与侧边栏相关的函数
-    // const handlePipelineChange = useCallback((newPipeline) => {
-    //     setSelectedPipeline(newPipeline);
-    //     // 可以在这里添加额外的逻辑，例如根据 Pipeline 过滤知识库等
-    // }, []);
-
-    // const handleKnowledgeBaseChange = useCallback((selectedIds) => {
-    //     setSelectedKBs(selectedIds);
-    //     // 可以在这里添加额外的逻辑，例如根据选择的知识库过滤内容等
-    // }, []);
-
     return (
         <Box
             sx={{
