@@ -66,7 +66,7 @@ const KnowledgeBaseManagement = ({
                     const apiUrl = process.env.REACT_APP_API_BASE_URL;
                     const response = await axios.get(`${apiUrl}/api/knowledge-bases/${selectedKnowledgeBase.id}/files`);
                     if (response.status === 200) {
-                        setFiles(response.data);
+                        setFiles(response.data || []);
                         setCachedFiles(selectedKnowledgeBase.id, response.data); // 缓存数据
                         console.log('从 API 获取并缓存文件数据');
                     }
@@ -93,7 +93,7 @@ const KnowledgeBaseManagement = ({
                 const apiUrl = process.env.REACT_APP_API_BASE_URL;
                 const response = await axios.get(`${apiUrl}/api/knowledge-bases/${selectedKnowledgeBase.id}/files`);
                 if (response.status === 200) {
-                    setFiles(response.data);
+                    setFiles(response.data || []);
                     setCachedFiles(selectedKnowledgeBase.id, response.data); // 重新缓存数据
                     console.log('从 API 刷新并缓存文件数据');
                 }

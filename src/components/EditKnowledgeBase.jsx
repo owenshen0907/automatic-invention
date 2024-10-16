@@ -72,7 +72,7 @@ const EditKnowledgeBase = ({
         try {
             setLoading(true);
             const apiUrl = process.env.REACT_APP_API_BASE_URL;
-            const response = await axios.put(`${apiUrl}/api/update-vector-store/${knowledgeBase.id}`, {
+            const response = await axios.put(`${apiUrl}/api/update-vector-store/${knowledgeBase.name}`, {
                 display_name: displayName.trim(),
                 description: description.trim(),
                 tags: tags.join(','), // 保存时包含标签

@@ -58,6 +58,7 @@ const KnowledgeBaseList = ({
                     open={isUploadDialogOpen}
                     onClose={handleCloseUploadDialog}
                     knowledgeBaseId={selectedKBForUpload.id} // 传入知识库的ID
+                    modelOwner={selectedKBForUpload.model_owner} // 新增: 传入模型所有者
                     setSnackbarMessage={setSnackbarMessage}
                     setSnackbarSeverity={setSnackbarSeverity}
                     setSnackbarOpen={setSnackbarOpen}

@@ -18,6 +18,7 @@ const UploadFileDialog = ({
                               open,
                               onClose,
                               knowledgeBaseId, // 接收知识库的ID
+                              modelOwner, // 新增: 接收模型所有者
                               setSnackbarMessage,
                               setSnackbarSeverity,
                               setSnackbarOpen,
@@ -53,6 +54,7 @@ const UploadFileDialog = ({
         formData.append('file', selectedFile);
         formData.append('file_name', fileName); // 用户输入的文件名
         formData.append('file_description', fileDescription); // 用户输入的文件描述
+        formData.append('model_owner', modelOwner); // 新增: 传入模型所有者
 
         try {
             setLoading(true);
@@ -62,7 +64,7 @@ const UploadFileDialog = ({
             setUploadProgress(0); // 重置上传进度
 
             // 发起文件上传请求
-            const response = await axios.post(`${process.env.REACT_APP_API_BASE_URL}/api/knowledge-upload-file`, formData, {
+            const response = await axios.post(`${process.env.REACT_APP_API_BASE_URL}/api/knowledge-uploads-file`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
