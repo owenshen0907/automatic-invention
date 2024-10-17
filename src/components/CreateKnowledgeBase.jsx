@@ -212,7 +212,6 @@ const CreateKnowledgeBase = ({
                             <MenuItem value="zhipu">zhipu</MenuItem>
                             <MenuItem value="moonshot">moonshot</MenuItem>
                             <MenuItem value="baichuan">baichuan</MenuItem>
-                            <MenuItem value="local">自定义</MenuItem>
                         </Select>
                     </FormControl>
                     <TextField

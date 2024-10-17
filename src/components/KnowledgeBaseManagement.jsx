@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+// src/components/KnowledgeBaseManagement.jsx
+import React, { useEffect, useState, useMemo } from 'react';
 import {
     Box,
     Typography,
@@ -10,7 +11,11 @@ import {
     TableHead,
     TableRow,
     Paper,
-    CircularProgress
+    CircularProgress,
+    Select,
+    MenuItem,
+    FormControl,
+    InputLabel
 } from '@mui/material';
 import axios from 'axios';
 
@@ -49,6 +54,10 @@ const KnowledgeBaseManagement = ({
                                  }) => {
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [purposeMap, setPurposeMap] = useState({}); // 管理每个文件的使用意图
+    const [processing, setProcessing] = useState({}); // 管理每个文件的处理状态
+
+    const isLocalModel = useMemo(() => selectedKnowledgeBase?.model_owner === 'local', [selectedKnowledgeBase]);
 
     // 组件加载时，优先从缓存中获取文件数据
     useEffect(() => {
@@ -108,6 +117,78 @@ const KnowledgeBaseManagement = ({
         }
     };
 
+    // 文件加载后初始化 `purposeMap`
+    useEffect(() => {
+        if (files.length > 0) {
+            const initialPurposeMap = {};
+            files.forEach(file => {
+                initialPurposeMap[file.id] = isLocalModel ? '' : 'retrieval'; // 设置初始意图
+            });
+            setPurposeMap(initialPurposeMap); // 初始化 `purposeMap`
+        }
+    }, [files, isLocalModel]);
+
+    // 文件使用意图改变时只更新相应的文件
+    const handlePurposeChange = (fileId, value) => {
+        if (!isLocalModel) return; // 如果不是本地模型，不允许更改
+
+        setPurposeMap(prev => ({
+            ...prev,
+            [fileId]: value
+        }));
+    };
+
+    // 处理开始处理按钮点击
+    const handleStartProcessing = async (file) => {
+        let purpose = purposeMap[file.id];
+        if (isLocalModel) {
+            if (!purpose) {
+                setSnackbarMessage('请选择使用意图');
+                setSnackbarSeverity('warning');
+                setSnackbarOpen(true);
+                return;
+            }
+        } else {
+            purpose = 'retrieval'; // 非本地模型，强制使用 'retrieval'
+        }
+
+        setProcessing(prev => ({
+            ...prev,
+            [file.id]: true
+        }));
+
+        try {
+            const apiUrl = process.env.REACT_APP_API_BASE_URL;  // 确保获取正确的 API 基础路径
+            const payload = {
+                model_owner: selectedKnowledgeBase.model_owner, // 假设 `model_owner` 是知识库的一个属性
+                file_id: file.file_id,
+                purpose: purpose,
+                vectorStoreID: selectedKnowledgeBase.id // 新增: 传递 vectorStoreID
+            };
+
+            const response = await axios.post(`${apiUrl}/api/trigger-external-upload`, payload);
+
+            if (response.status === 200) {
+                setSnackbarMessage(`文件 "${file.file_name}" 开始处理`);
+                setSnackbarSeverity('success');
+                setSnackbarOpen(true);
+                console.log(`文件 "${file.file_name}" 处理已触发`);
+            } else {
+                throw new Error('处理请求失败');
+            }
+        } catch (error) {
+            console.error('处理文件失败:', error);
+            setSnackbarMessage(`处理文件 "${file.file_name}" 失败，请重试`);
+            setSnackbarSeverity('error');
+            setSnackbarOpen(true);
+        } finally {
+            setProcessing(prev => ({
+                ...prev,
+                [file.id]: false
+            }));
+        }
+    };
+
     if (!selectedKnowledgeBase) {
         return null;
     }
@@ -125,6 +206,7 @@ const KnowledgeBaseManagement = ({
                     <Table>
                         <TableHead>
                             <TableRow>
+                                {/*<TableCell>文件ID</TableCell>*/}
                                 <TableCell>文件名</TableCell>
                                 <TableCell>存储路径</TableCell>
                                 <TableCell>文件类型</TableCell>
@@ -132,13 +214,15 @@ const KnowledgeBaseManagement = ({
                                 <TableCell>上传时间</TableCell>
                                 <TableCell>向量存储文件 ID</TableCell>
                                 <TableCell>使用字节数</TableCell>
-                                <TableCell>状态</TableCell>
+                                <TableCell>使用意图</TableCell>
+                                <TableCell>操作</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {files.length > 0 ? (
                                 files.map((file, index) => (
-                                    <TableRow key={index}>
+                                    <TableRow key={file.id || index}>
+                                        {/*<TableCell>{file.file_id}</TableCell>*/}
                                         <TableCell>{file.file_name}</TableCell>
                                         <TableCell>{file.file_path}</TableCell>
                                         <TableCell>{file.file_type}</TableCell>
@@ -146,12 +230,43 @@ const KnowledgeBaseManagement = ({
                                         <TableCell>{new Date(file.upload_time).toLocaleString()}</TableCell>
                                         <TableCell>{file.vector_file_id || '无'}</TableCell>
                                         <TableCell>{file.usage_bytes}</TableCell>
-                                        <TableCell>{file.status || '未知'}</TableCell>
+                                        <TableCell>
+                                            {isLocalModel ? (
+                                                <FormControl fullWidth variant="outlined" size="small">
+                                                    <InputLabel id={`purpose-label-${file.id}`}>选择意图</InputLabel>
+                                                    <Select
+                                                        labelId={`purpose-label-${file.id}`}
+                                                        value={purposeMap[file.id] || ''}
+                                                        onChange={(e) => handlePurposeChange(file.id, e.target.value)}
+                                                        label="选择意图"
+                                                    >
+                                                        <MenuItem value="file-extract">解析文档</MenuItem>
+                                                        <MenuItem value="batch">批量请求</MenuItem>
+                                                        <MenuItem value="fine-tune">Finetune</MenuItem>
+                                                    </Select>
+                                                </FormControl>
+                                            ) : (
+                                                <Typography variant="body2">知识库</Typography>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Box sx={{ mt: 1 }}>
+                                                <Button
+                                                    variant="contained"
+                                                    color="primary"
+                                                    size="small"
+                                                    onClick={() => handleStartProcessing(file)}
+                                                    disabled={processing[file.id]}
+                                                >
+                                                    {processing[file.id] ? <CircularProgress size={20} /> : '开始处理'}
+                                                </Button>
+                                            </Box>
+                                        </TableCell>
                                     </TableRow>
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={8} align="center">暂无文件</TableCell>
+                                    <TableCell colSpan={9} align="center">暂无文件</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>

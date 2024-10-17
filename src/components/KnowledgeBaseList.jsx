@@ -27,6 +27,16 @@ const KnowledgeBaseList = ({
     const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
     const [selectedKBForUpload, setSelectedKBForUpload] = useState(null);
 
+    // 对 knowledgeBases 进行排序，将 model_owner 为 'local' 的放在前面
+    const sortedKnowledgeBases = [...knowledgeBases].sort((a, b) => {
+        if (a.model_owner === 'local' && b.model_owner !== 'local') {
+            return -1;
+        } else if (a.model_owner !== 'local' && b.model_owner === 'local') {
+            return 1;
+        }
+        return 0;
+    });
+
     // 处理上传对话框的打开
     const handleOpenUploadDialog = (kb) => {
         setSelectedKBForUpload(kb);
@@ -75,7 +85,7 @@ const KnowledgeBaseList = ({
                     overflowX: selectedKnowledgeBase ? 'auto' : 'visible',
                 }}
             >
-                {knowledgeBases.map((kb) => (
+                {sortedKnowledgeBases.map((kb) => (
                     <Grid item xs={12} sm={6} md={4} key={kb.id}>
                         <Card
                             sx={{
@@ -85,7 +95,7 @@ const KnowledgeBaseList = ({
                                 boxShadow: 6, // 增加阴影等级
                                 borderRadius: 2,
                                 transition: 'transform 0.2s',
-                                backgroundColor: '#fff9ff', // 保持卡片背景为白色
+                                backgroundColor: kb.model_owner === 'local' ? '#e0f7fa' : '#fff9ff', // 条件设置背景颜色
                                 '&:hover': {
                                     transform: 'scale(1.02)',
                                 },
