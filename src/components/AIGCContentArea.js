@@ -23,7 +23,7 @@ const MessageBubble = styled(Box)(({ theme, sender }) => ({
     wordBreak: 'break-word', // 防止长单词或链接导致布局问题
 }));
 
-const ContentArea = ({ messages, loading }) => {
+const AIGCContentArea = ({ messages, loading }) => {
     const contentEndRef = useRef(null);
 
     useEffect(() => {
@@ -77,4 +77,4 @@ const ContentArea = ({ messages, loading }) => {
     );
 };
 
-export default ContentArea;
+export default AIGCContentArea;

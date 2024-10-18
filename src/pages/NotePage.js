@@ -23,7 +23,7 @@ const NotePage = () => {
                     这是记事本页面的内容。您可以在这里添加和管理您的笔记。
                 </Typography>
             </Paper>
-            {/* 如果需要输入区域，可以添加 InputArea 组件 */}
+            {/* 如果需要输入区域，可以添加 AIGCInputArea 组件 */}
         </Box>
     );
 };

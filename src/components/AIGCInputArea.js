@@ -1,10 +1,10 @@
-// src/components/InputArea.js
+// src/components/AIGCInputArea.js
 import React, { useState } from 'react';
 import { Box, TextField, IconButton, Button, Paper } from '@mui/material';
 import { AttachFile } from '@mui/icons-material';
 
-const InputArea = ({ onSend }) => {
-    console.log('InputArea received onSend:', onSend); // 调试日志
+const AIGCInputArea = ({ onSend }) => {
+    console.log('AIGCInputArea received onSend:', onSend); // 调试日志
 
     const [inputValue, setInputValue] = useState('');
     const [selectedFile, setSelectedFile] = useState(null);
@@ -69,4 +69,4 @@ const InputArea = ({ onSend }) => {
     );
 };
 
-export default InputArea;
+export default AIGCInputArea;

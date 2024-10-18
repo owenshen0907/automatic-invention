@@ -1,5 +1,5 @@
 // src/components/KnowledgeBaseManagement.jsx
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Box,
     Typography,
@@ -18,117 +18,28 @@ import {
     InputLabel
 } from '@mui/material';
 import axios from 'axios';
-
-// 缓存相关辅助函数
-const FILE_CACHE_KEY_PREFIX = 'knowledgeBaseFiles_';
-
-const getCachedFiles = (knowledgeBaseID) => {
-    const cached = localStorage.getItem(`${FILE_CACHE_KEY_PREFIX}${knowledgeBaseID}`);
-    if (!cached) return null;
-
-    try {
-        const parsed = JSON.parse(cached);
-        return parsed;
-    } catch (error) {
-        console.error('解析文件缓存数据失败:', error);
-        localStorage.removeItem(`${FILE_CACHE_KEY_PREFIX}${knowledgeBaseID}`);
-        return null;
-    }
-};
-
-const setCachedFiles = (knowledgeBaseID, files) => {
-    const payload = JSON.stringify(files);
-    localStorage.setItem(`${FILE_CACHE_KEY_PREFIX}${knowledgeBaseID}`, payload);
-};
-
-const clearCachedFiles = (knowledgeBaseID) => {
-    localStorage.removeItem(`${FILE_CACHE_KEY_PREFIX}${knowledgeBaseID}`);
-};
+import useKnowledgeBaseFiles from '../hooks/useKnowledgeBaseFiles';
 
 const KnowledgeBaseManagement = ({
                                      selectedKnowledgeBase,
                                      onBack,
-                                     setSnackbarMessage,
-                                     setSnackbarSeverity,
-                                     setSnackbarOpen
+                                     setSnackbar,
                                  }) => {
-    const [files, setFiles] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [purposeMap, setPurposeMap] = useState({}); // 管理每个文件的使用意图
-    const [processing, setProcessing] = useState({}); // 管理每个文件的处理状态
+    const isLocalModel = selectedKnowledgeBase?.model_owner === 'local';
 
-    const isLocalModel = useMemo(() => selectedKnowledgeBase?.model_owner === 'local', [selectedKnowledgeBase]);
+    // 使用自定义 Hook 管理文件数据
+    const {
+        files,
+        loading,
+        purposeMap,
+        setPurposeMap,
+        processing,
+        setProcessing,
+        fetchFiles,
+        refreshFiles,
+    } = useKnowledgeBaseFiles(selectedKnowledgeBase.id, isLocalModel, setSnackbar);
 
-    // 组件加载时，优先从缓存中获取文件数据
-    useEffect(() => {
-        const fetchFiles = async () => {
-            try {
-                if (selectedKnowledgeBase) {
-                    const cachedFiles = getCachedFiles(selectedKnowledgeBase.id);
-                    if (cachedFiles) {
-                        setFiles(cachedFiles);
-                        setLoading(false);
-                        console.log('使用缓存的文件数据');
-                        return;
-                    }
-
-                    const apiUrl = process.env.REACT_APP_API_BASE_URL;
-                    const response = await axios.get(`${apiUrl}/api/knowledge-bases/${selectedKnowledgeBase.id}/files`);
-                    if (response.status === 200) {
-                        setFiles(response.data || []);
-                        setCachedFiles(selectedKnowledgeBase.id, response.data); // 缓存数据
-                        console.log('从 API 获取并缓存文件数据');
-                    }
-                }
-            } catch (error) {
-                console.error('无法加载文件数据:', error);
-                setSnackbarMessage('无法加载文件数据，请重试');
-                setSnackbarSeverity('error');
-                setSnackbarOpen(true);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchFiles();
-    }, [selectedKnowledgeBase, setSnackbarMessage, setSnackbarSeverity, setSnackbarOpen]);
-
-    // 处理刷新按钮，清除缓存并重新加载文件数据
-    const handleRefresh = async () => {
-        if (selectedKnowledgeBase) {
-            clearCachedFiles(selectedKnowledgeBase.id); // 清除缓存
-            setLoading(true);
-            try {
-                const apiUrl = process.env.REACT_APP_API_BASE_URL;
-                const response = await axios.get(`${apiUrl}/api/knowledge-bases/${selectedKnowledgeBase.id}/files`);
-                if (response.status === 200) {
-                    setFiles(response.data || []);
-                    setCachedFiles(selectedKnowledgeBase.id, response.data); // 重新缓存数据
-                    console.log('从 API 刷新并缓存文件数据');
-                }
-            } catch (error) {
-                console.error('刷新文件数据失败:', error);
-                setSnackbarMessage('无法刷新文件数据，请重试');
-                setSnackbarSeverity('error');
-                setSnackbarOpen(true);
-            } finally {
-                setLoading(false);
-            }
-        }
-    };
-
-    // 文件加载后初始化 `purposeMap`
-    useEffect(() => {
-        if (files.length > 0) {
-            const initialPurposeMap = {};
-            files.forEach(file => {
-                initialPurposeMap[file.id] = isLocalModel ? '' : 'retrieval'; // 设置初始意图
-            });
-            setPurposeMap(initialPurposeMap); // 初始化 `purposeMap`
-        }
-    }, [files, isLocalModel]);
-
-    // 文件使用意图改变时只更新相应的文件
+    // 处理使用意图改变
     const handlePurposeChange = (fileId, value) => {
         if (!isLocalModel) return; // 如果不是本地模型，不允许更改
 
@@ -143,9 +54,11 @@ const KnowledgeBaseManagement = ({
         let purpose = purposeMap[file.id];
         if (isLocalModel) {
             if (!purpose) {
-                setSnackbarMessage('请选择使用意图');
-                setSnackbarSeverity('warning');
-                setSnackbarOpen(true);
+                setSnackbar({
+                    open: true,
+                    message: '请选择使用意图',
+                    severity: 'warning',
+                });
                 return;
             }
         } else {
@@ -169,18 +82,22 @@ const KnowledgeBaseManagement = ({
             const response = await axios.post(`${apiUrl}/api/trigger-external-upload`, payload);
 
             if (response.status === 200) {
-                setSnackbarMessage(`文件 "${file.file_name}" 开始处理`);
-                setSnackbarSeverity('success');
-                setSnackbarOpen(true);
+                setSnackbar({
+                    open: true,
+                    message: `文件 "${file.file_name}" 开始处理`,
+                    severity: 'success',
+                });
                 console.log(`文件 "${file.file_name}" 处理已触发`);
             } else {
                 throw new Error('处理请求失败');
             }
         } catch (error) {
             console.error('处理文件失败:', error);
-            setSnackbarMessage(`处理文件 "${file.file_name}" 失败，请重试`);
-            setSnackbarSeverity('error');
-            setSnackbarOpen(true);
+            setSnackbar({
+                open: true,
+                message: `处理文件 "${file.file_name}" 失败，请重试`,
+                severity: 'error',
+            });
         } finally {
             setProcessing(prev => ({
                 ...prev,
@@ -189,13 +106,22 @@ const KnowledgeBaseManagement = ({
         }
     };
 
-    if (!selectedKnowledgeBase) {
-        return null;
-    }
-
     return (
         <Box sx={{ p: 2 }}>
-            <Typography variant="h5">文件列表 - {selectedKnowledgeBase.display_name}</Typography>
+            {/* 将标题和按钮放在同一个容器中，并设置为 flex 布局 */}
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="h5">
+                    文件列表 - {selectedKnowledgeBase.display_name}
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Button variant="contained" color="primary" onClick={onBack}>
+                        返回列表
+                    </Button>
+                    <Button variant="outlined" color="secondary" onClick={refreshFiles}>
+                        刷新文件列表
+                    </Button>
+                </Box>
+            </Box>
 
             {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
@@ -273,15 +199,6 @@ const KnowledgeBaseManagement = ({
                     </Table>
                 </TableContainer>
             )}
-
-            <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between' }}>
-                <Button variant="contained" color="primary" onClick={onBack}>
-                    返回列表
-                </Button>
-                <Button variant="outlined" color="secondary" onClick={handleRefresh}>
-                    刷新文件列表
-                </Button>
-            </Box>
         </Box>
     );
 };

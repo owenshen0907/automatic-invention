@@ -1,107 +1,52 @@
-// src/pages/AIGCPage.js
+// src/pages/AIGCPage.jsx
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useContext } from 'react';
 import { Box, Paper, Snackbar, Alert } from '@mui/material';
-import ContentArea from '../components/ContentArea';
-import InputArea from '../components/InputArea';
-import FunctionalitySidebar from '../components/FunctionalitySidebar';
-import axios from 'axios';
-
-const CACHE_KEY = 'knowledgeBases';
-const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 小时
+import AIGCContentArea from '../components/AIGCContentArea';
+import AIGCInputArea from '../components/AIGCInputArea';
+import AIGCFunctionalitySidebar from '../components/AIGCFunctionalitySidebar';
+import { KnowledgeBaseContext } from '../context/KnowledgeBaseContext';
 
 const AIGCPage = () => {
     const [messages, setMessages] = useState([]); // 消息数组
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [selectedPipeline, setSelectedPipeline] = useState(''); // 初始为空
-
-    // 新增 knowledgeBases 状态
-    const [knowledgeBases, setKnowledgeBases] = useState([]);
     const [selectedKB, setSelectedKB] = useState(''); // 新增：选中的知识库 ID
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+    const [enableWebSearch, setEnableWebSearch] = useState(false); // 新增: 是否启用联网搜索
+    const [selectedVectorFileId, setSelectedVectorFileId] = useState('');//解析文档的文档ID
 
-    // 辅助函数：获取缓存数据
-    const getCachedData = () => {
-        const cached = localStorage.getItem(CACHE_KEY);
-        if (!cached) return null;
+    // 从 KnowledgeBaseContext 获取知识库数据和相关方法
+    const { knowledgeBases, loading: kbLoading, error: kbError, fetchKnowledgeBases } = useContext(KnowledgeBaseContext);
 
-        try {
-            const parsed = JSON.parse(cached);
-            const now = new Date().getTime();
-            if (now - parsed.timestamp < CACHE_EXPIRY) {
-                return parsed.data;
-            } else {
-                // 缓存过期
-                localStorage.removeItem(CACHE_KEY);
-                return null;
-            }
-        } catch (error) {
-            console.error('解析缓存数据失败:', error);
-            localStorage.removeItem(CACHE_KEY);
-            return null;
-        }
-    };
-
-    // 辅助函数：设置缓存数据
-    const setCachedData = (data) => {
-        const payload = {
-            data,
-            timestamp: new Date().getTime(),
-        };
-        localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
-    };
-
-    // 获取知识库数据的函数
-    const fetchKnowledgeBases = useCallback(async () => {
-        try {
-            const cachedData = getCachedData();
-            if (cachedData) {
-                setKnowledgeBases(cachedData);
-                console.log('使用缓存的知识库数据');
-                return;
-            }
-
-            const apiUrl = process.env.REACT_APP_API_BASE_URL;
-            const response = await axios.get(`${apiUrl}/api/get-data?type=knowledge_bases`);
-            if (response.status === 200) {
-                const data = response.data.map(kb => ({
-                    ...kb,
-                    tags: kb.tags || "",
-                }));
-                setKnowledgeBases(data);
-                setCachedData(data); // 缓存数据
-                console.log('从 API 获取并缓存知识库数据');
-            }
-        } catch (error) {
-            console.error('无法加载知识库数据:', error);
-            setSnackbarMessage('无法加载知识库数据，请重试');
-            setSnackbarSeverity('error');
-            setSnackbarOpen(true);
-        }
-    }, []);
-
-    // 在组件加载时获取知识库数据
-    useEffect(() => {
-        fetchKnowledgeBases();
-    }, [fetchKnowledgeBases]);
-
-
+    // 处理 Pipeline 变化
     const handlePipelineChange = (pipeline) => {
         setSelectedPipeline(pipeline);
     };
 
-    // 新增：处理知识库选择变化
+    // 处理知识库选择变化
     const handleKnowledgeBaseChange = (selectedKBId) => {
         setSelectedKB(selectedKBId);
         console.log('Selected Knowledge Base ID:', selectedKBId);
     };
+    const handleFileChange = (VectorFileId) => {
+        setSelectedVectorFileId(VectorFileId);
+        console.log('Selected VectorFileId:', VectorFileId);
+    };
 
+    // 处理联网搜索变化
+    const handleWebSearchChange = (isEnabled) => {
+        setEnableWebSearch(isEnabled); // 更新启用联网搜索的状态
+        console.log('Enable Web Search:', isEnabled);
+    };
+
+    // 发送消息的处理函数
     const handleSend = async (inputValue, selectedFile) => {
         if (inputValue.trim() === '' && !selectedFile) {
-            // 可以添加提示用户输入内容或选择文件
+            // 添加提示用户输入内容或选择文件
             setSnackbarMessage('请输入内容或选择文件后再发送。');
             setSnackbarSeverity('warning');
             setSnackbarOpen(true);
@@ -127,24 +72,19 @@ const AIGCPage = () => {
                 fileUrl = await uploadFileAndGetUrl(selectedFile); // 实现文件上传逻辑
                 console.log('文件上传完成，URL:', fileUrl);
             }
+
             // 获取选中的知识库详情
             const selectedKnowledgeBase = knowledgeBases.find(kb => kb.id === selectedKB);
-            if (!selectedKnowledgeBase) {
-                throw new Error('选中的知识库不存在，请重新选择。');
-            }
 
-            //构建调用 API的请求数据
-
+            // 构建调用 API 的请求数据
             const data = {
                 inputs: {},
                 query: inputValue,
                 response_mode: "streaming",
                 conversation_id: "",
                 user: "abc-123",
-                name: selectedKnowledgeBase.name, // 确保字段之间有逗号
-                description: selectedKnowledgeBase.description,
-                tags: "",
                 vector_store_id: selectedKB, // 添加 vector_store_id
+                vector_file_id: selectedVectorFileId || '',
                 files: selectedFile
                     ? [
                         {
@@ -156,6 +96,15 @@ const AIGCPage = () => {
                     : []
             };
 
+            // 动态添加知识库字段，只有在知识库不为空时才添加
+            if (selectedKnowledgeBase) {
+                const { name, description } = selectedKnowledgeBase;
+                if (name) data.name = name;
+                if (description) data.description = description;
+            }
+
+            // 动态添加联网搜索字段，如果启用了联网搜索
+            data.web_search = enableWebSearch; // 使用父组件的状态
             console.log('发送数据:', data);
 
             // 根据选择的 Pipeline 选择不同的 API 接口
@@ -299,10 +248,10 @@ const AIGCPage = () => {
                         overflowX: 'hidden', // 防止水平溢出
                     }}
                 >
-                    <ContentArea messages={messages} loading={loading} />
+                    <AIGCContentArea messages={messages} loading={loading} />
                 </Paper>
                 <Box sx={{ height: '10px' }} /> {/* 增加间距 */}
-                <InputArea onSend={handleSend} /> {/* 传递 onSend */}
+                <AIGCInputArea onSend={handleSend} /> {/* 传递 onSend */}
             </Box>
             {/* 右侧功能区 */}
             <Paper
@@ -318,11 +267,13 @@ const AIGCPage = () => {
                     overflowY: 'auto',
                 }}
             >
-                <FunctionalitySidebar
-                    knowledgeBases={knowledgeBases} // 确保传递了 knowledgeBases
+                <AIGCFunctionalitySidebar
                     selectedPipeline={selectedPipeline}
                     onPipelineChange={handlePipelineChange}
                     onKnowledgeBaseChange={handleKnowledgeBaseChange} // 传递知识库变化回调
+                    onWebSearchChange={handleWebSearchChange} // 传递联网搜索变化回调
+                    enableWebSearch={enableWebSearch} // 传递当前的 web_search 状态
+                    onFileChange={handleFileChange} // Add this line
                 />
             </Paper>
             {/* 错误提示 */}
@@ -332,8 +283,8 @@ const AIGCPage = () => {
                 </Alert>
             </Snackbar>
             {/* 成功提示 */}
-            <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={() => setSnackbarOpen(false)}>
-                <Alert onClose={() => setSnackbarOpen(false)} severity={snackbarSeverity} sx={{ width: '100%' }}>
+            <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={handleCloseSnackbar}>
+                <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{ width: '100%' }}>
                     {snackbarMessage}
                 </Alert>
             </Snackbar>

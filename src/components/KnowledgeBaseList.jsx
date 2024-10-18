@@ -7,7 +7,8 @@ import {
     Card,
     CardContent,
     Chip,
-    IconButton
+    IconButton,
+    Pagination // 导入 Pagination 组件
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
@@ -26,6 +27,9 @@ const KnowledgeBaseList = ({
     // 状态用于控制上传对话框的显示和记录选中的知识库
     const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
     const [selectedKBForUpload, setSelectedKBForUpload] = useState(null);
+    // 分页相关的状态
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 12; // 每页显示12个卡片（2行，每行6个）
 
     // 对 knowledgeBases 进行排序，将 model_owner 为 'local' 的放在前面
     const sortedKnowledgeBases = [...knowledgeBases].sort((a, b) => {
@@ -36,6 +40,19 @@ const KnowledgeBaseList = ({
         }
         return 0;
     });
+    // 计算分页数据
+    const totalPages = Math.ceil(sortedKnowledgeBases.length / itemsPerPage);
+    const paginatedKnowledgeBases = sortedKnowledgeBases.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
+    // 处理页码变化
+    const handlePageChange = (event, value) => {
+        setCurrentPage(value);
+        // 滚动到顶部以提升用户体验
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
 
     // 处理上传对话框的打开
     const handleOpenUploadDialog = (kb) => {
@@ -77,16 +94,30 @@ const KnowledgeBaseList = ({
             )}
 
             {/* KnowledgeBaseList 内容 */}
-            <Grid
-                container
-                spacing={2} // 控制卡片之间的间距
+            {/*<Grid*/}
+            {/*    container*/}
+            {/*    spacing={2} // 控制卡片之间的间距*/}
+            {/*    sx={{*/}
+            {/*        flexWrap: selectedKnowledgeBase ? 'nowrap' : 'wrap',*/}
+            {/*        overflowX: selectedKnowledgeBase ? 'auto' : 'visible',*/}
+            {/*    }}*/}
+            {/*>*/}
+            <Box
                 sx={{
-                    flexWrap: selectedKnowledgeBase ? 'nowrap' : 'wrap',
-                    overflowX: selectedKnowledgeBase ? 'auto' : 'visible',
+                    flexGrow: 1, // 允许这个区域扩展以占用可用空间
+                    overflowY: 'auto', // 当内容超出时，允许垂直滚动
                 }}
             >
+                <Grid container spacing={2}>
                 {sortedKnowledgeBases.map((kb) => (
-                    <Grid item xs={12} sm={6} md={4} key={kb.id}>
+                    <Grid
+                        item
+                        key={kb.id}
+                        xs={12}    // 超小屏，每行1个
+                        sm={6}     // 小屏，每行2个
+                        md={4}     // 中屏，每行3个
+                        lg={2}     // 大屏，每行6个
+                    >
                         <Card
                             sx={{
                                 display: 'flex',
@@ -101,6 +132,38 @@ const KnowledgeBaseList = ({
                                 },
                             }}
                         >
+                            {/* 所属模型和创建者 ID 显示及操作按钮（移动到顶部） */}
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    p: 2,
+                                    backgroundColor: '#f5f5f5',
+                                    borderTopLeftRadius: '8px',
+                                    borderTopRightRadius: '8px',
+                                }}
+                            >
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary">
+                                        模型: {kb.model_owner || '未知模型'}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        创建者ID: {kb.creator_id || '未知创建者'}
+                                    </Typography>
+                                </Box>
+                                <Box>
+                                    <IconButton onClick={() => onEditKnowledgeBase(kb)} color="primary" size="small" aria-label="edit">
+                                        <EditIcon fontSize="small" />
+                                    </IconButton>
+                                    <IconButton onClick={() => onSelectKnowledgeBase(kb)} color="secondary" size="small" aria-label="manage">
+                                        <ManageAccountsIcon fontSize="small" />
+                                    </IconButton>
+                                    <IconButton onClick={() => handleOpenUploadDialog(kb)} color="default" size="small" aria-label="upload">
+                                        <UploadFileIcon fontSize="small" />
+                                    </IconButton>
+                                </Box>
+                            </Box>
                             <CardContent
                                 sx={{
                                     flexGrow: 1,
@@ -140,38 +203,32 @@ const KnowledgeBaseList = ({
                                     ))}
                                 </Box>
                             </CardContent>
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    justifyContent: 'flex-end',
-                                    alignItems: 'center',
-                                    p: 1,
-                                    pt: 0,
-                                }}
-                            >
-                                {/* 所属模型和创建者 ID 显示 */}
-                                <Box sx={{ display: 'flex', alignItems: 'left' }}>
-                                    <Typography variant="caption" color="text.secondary" sx={{ mr: 2 }}>
-                                        模型: {kb.model_owner || '未知模型'}
-                                    </Typography>
-                                    <Typography variant="caption" color="text.secondary">
-                                        创建者ID: {kb.creator_id || '未知创建者'}
-                                    </Typography>
-                                </Box>
-                                <IconButton onClick={() => onEditKnowledgeBase(kb)} color="primary" size="small" aria-label="edit">
-                                    <EditIcon fontSize="small" />
-                                </IconButton>
-                                <IconButton onClick={() => onSelectKnowledgeBase(kb)} color="secondary" size="small" aria-label="manage">
-                                    <ManageAccountsIcon fontSize="small" />
-                                </IconButton>
-                                <IconButton onClick={() => handleOpenUploadDialog(kb)} color="default" size="small" aria-label="upload">
-                                    <UploadFileIcon fontSize="small" />
-                                </IconButton>
-                            </Box>
                         </Card>
                     </Grid>
                 ))}
-            </Grid>
+            {/*</Grid>*/}
+                </Grid>
+            </Box>
+
+            {/* 分页控件 */}
+            {totalPages > 1 && (
+                <Box
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        mt: 2,
+                    }}
+                >
+                    <Pagination
+                        count={totalPages}
+                        page={currentPage}
+                        onChange={handlePageChange}
+                        color="primary"
+                        showFirstButton
+                        showLastButton
+                    />
+                </Box>
+            )}
         </Box>
     );
 
