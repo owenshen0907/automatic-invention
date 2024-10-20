@@ -169,6 +169,7 @@ const AIGCFunctionalitySidebar = ({
                                 label="选择知识库"
                                 disabled={loading} // 禁用选择器在加载时
                             >
+                                <MenuItem value="">清除选择</MenuItem> {/* 清除选项 */}
                                 {filteredKnowledgeBases.map((kb) => (
                                     <MenuItem key={kb.id} value={kb.id}>
                                         {kb.display_name}
@@ -179,9 +180,6 @@ const AIGCFunctionalitySidebar = ({
                     </Box>
                     {/* 文件选择框，独立于知识库选择 */}
                     <Box sx={{ marginBottom: 3 }}>
-                        <Typography variant="subtitle1" gutterBottom>
-                            选择文件
-                        </Typography>
                         {filesLoading ? (
                             <CircularProgress size={24} />
                         ) : (
@@ -193,6 +191,7 @@ const AIGCFunctionalitySidebar = ({
                                     onChange={handleFileChange}
                                     label="选择文件"
                                 >
+                                    <MenuItem value="">清除选择</MenuItem> {/* 清除选项 */}
                                     {filteredFiles.length > 0 ? (
                                         filteredFiles.map((file) => (
                                             <MenuItem key={file.vector_file_id} value={file.vector_file_id}>

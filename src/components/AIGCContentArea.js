@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Typography, Box, Avatar } from '@mui/material';
 import { styled } from '@mui/system';
+import { Description } from '@mui/icons-material';
 import userAvatar from '../assets/user-avatar.png'; // 用户头像图片
 import botAvatar from '../assets/bot-avatar.png'; // 机器人头像图片
 
@@ -59,11 +60,57 @@ const AIGCContentArea = ({ messages, loading }) => {
                     />
                     {/* 消息气泡 */}
                     <MessageBubble sender={msg.sender}>
-                        <Typography variant="body1">
-                            {msg.content}
-                            {/* 如果正在加载，显示一个下划线占位符 */}
-                            {loading && msg.sender === 'bot' && '_'}
-                        </Typography>
+                        {/* 文本内容 */}
+                        {msg.content && (
+                            <Typography variant="body1">
+                                {msg.content}
+                                {loading && msg.sender === 'bot' && '_'}
+                            </Typography>
+                        )}
+                        {/* 文件或图片缩略图 */}
+                        {msg.files && msg.files.length > 0 && (
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    flexWrap: 'wrap',
+                                    marginTop: msg.content ? 1 : 0,
+                                }}
+                            >
+                                {msg.files.map((file, index) => (
+                                    file.type === 'image' ? (
+                                        <img
+                                            key={index}
+                                            src={file.url || file.previewUrl}
+                                            alt={file.name}
+                                            style={{
+                                                maxWidth: '100px',
+                                                maxHeight: '100px',
+                                                marginRight: 8,
+                                                marginBottom: 8,
+                                                borderRadius: 4,
+                                            }}
+                                        />
+                                    ) : (
+                                        <Box
+                                            key={index}
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                marginRight: 2,
+                                                marginBottom: 2,
+                                            }}
+                                        >
+                                            <Description sx={{ marginRight: 1 }} />
+                                            <Typography variant="body2">
+                                                <a href={file.url || '#'} target="_blank" rel="noopener noreferrer">
+                                                    {file.name}
+                                                </a>
+                                            </Typography>
+                                        </Box>
+                                    )
+                                ))}
+                            </Box>
+                        )}
                         <Typography variant="caption">
                             {msg.createdAt}
                         </Typography>

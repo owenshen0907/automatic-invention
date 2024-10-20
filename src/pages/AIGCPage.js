@@ -44,8 +44,8 @@ const AIGCPage = () => {
     };
 
     // 发送消息的处理函数
-    const handleSend = async (inputValue, selectedFile) => {
-        if (inputValue.trim() === '' && !selectedFile) {
+    const handleSend = async (inputValue, uploadedFileIds,fileType) => {
+        if (inputValue.trim() === '' && selectedFiles.length === 0) {
             // 添加提示用户输入内容或选择文件
             setSnackbarMessage('请输入内容或选择文件后再发送。');
             setSnackbarSeverity('warning');
@@ -53,26 +53,24 @@ const AIGCPage = () => {
             return;
         }
 
-        // 添加用户消息到消息数组
+        // 创建用户消息对象
         const userMessage = {
             id: Date.now(), // 唯一标识
             sender: 'user',
-            content: inputValue,
+            type: 'text',
+            content: inputValue.trim() !== '' ? inputValue : null,
+            fileIds: uploadedFileIds || [],
             createdAt: new Date().toLocaleTimeString(),
         };
+
+        // 将用户消息添加到消息数组
         setMessages(prevMessages => [...prevMessages, userMessage]);
+
 
         setLoading(true);
         setError(null);
 
         try {
-            let fileUrl = '';
-            if (selectedFile) {
-                console.log('开始上传文件...');
-                fileUrl = await uploadFileAndGetUrl(selectedFile); // 实现文件上传逻辑
-                console.log('文件上传完成，URL:', fileUrl);
-            }
-
             // 获取选中的知识库详情
             const selectedKnowledgeBase = knowledgeBases.find(kb => kb.id === selectedKB);
 
@@ -85,16 +83,16 @@ const AIGCPage = () => {
                 user: "abc-123",
                 vector_store_id: selectedKB, // 添加 vector_store_id
                 vector_file_id: selectedVectorFileId || '',
-                files: selectedFile
-                    ? [
-                        {
-                            type: selectedFile.type.startsWith('image/') ? "image" : "file",
-                            transfer_method: "remote_url",
-                            url: fileUrl
-                        }
-                    ]
-                    : []
+                file_ids: uploadedFileIds || [], // 将文件 IDs 传递给后端
+                web_search: enableWebSearch,
+                file_type: '', // 初始化 file_type
             };
+            // 根据 fileType 设置 file_type 字段
+            if (fileType === 'image') {
+                data.file_type = 'img';
+            } else if (fileType === 'file') {
+                data.file_type = 'file';
+            }
 
             // 动态添加知识库字段，只有在知识库不为空时才添加
             if (selectedKnowledgeBase) {
@@ -102,9 +100,6 @@ const AIGCPage = () => {
                 if (name) data.name = name;
                 if (description) data.description = description;
             }
-
-            // 动态添加联网搜索字段，如果启用了联网搜索
-            data.web_search = enableWebSearch; // 使用父组件的状态
             console.log('发送数据:', data);
 
             // 根据选择的 Pipeline 选择不同的 API 接口
@@ -292,11 +287,23 @@ const AIGCPage = () => {
     );
 };
 
-// 示例文件上传函数
-const uploadFileAndGetUrl = async (file) => {
-    // 实现文件上传逻辑，如使用 AWS S3、Cloudinary 等服务
-    // 这里以假设返回一个 URL 为例
-    return 'https://example.com/path-to-uploaded-file.png';
-};
+// // 示例文件上传函数
+// const uploadFileAndGetUrl = async (file) => {
+//     // 实现实际的文件上传逻辑，这里以 FormData 为例
+//     const formData = new FormData();
+//     formData.append('file', file);
+//
+//     const response = await fetch('YOUR_UPLOAD_ENDPOINT', {
+//         method: 'POST',
+//         body: formData,
+//     });
+//
+//     if (!response.ok) {
+//         throw new Error('文件上传失败');
+//     }
+//
+//     const result = await response.json();
+//     return result.url; // 假设返回的结果中包含文件的 URL
+// };
 
 export default AIGCPage;

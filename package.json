@@ -13,7 +13,8 @@
     "@emotion/react": "^11.11.0",
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^5.15.0",
-    "axios": "^1.4.0"
+    "axios": "^1.4.0",
+    "browser-image-compression": "^2.0.0"
   },
   "scripts": {
     "start": "react-scripts start",
