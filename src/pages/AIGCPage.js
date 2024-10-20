@@ -44,8 +44,8 @@ const AIGCPage = () => {
     };
 
     // 发送消息的处理函数
-    const handleSend = async (inputValue, uploadedFileIds,fileType) => {
-        if (inputValue.trim() === '' && selectedFiles.length === 0) {
+    const handleSend = async (inputValue, uploadedFileIds,fileType,selectedFiles) => {
+        if (inputValue.trim() === '' && uploadedFileIds.length === 0) {
             // 添加提示用户输入内容或选择文件
             setSnackbarMessage('请输入内容或选择文件后再发送。');
             setSnackbarSeverity('warning');
@@ -53,13 +53,21 @@ const AIGCPage = () => {
             return;
         }
 
-        // 创建用户消息对象
+        // 创建包含必要信息的 files 数组
+        const files = selectedFiles.map(file => ({
+            url: URL.createObjectURL(file), // 或者使用实际上传后的文件 URL
+            name: file.name,
+            type: file.type.startsWith('image/') ? 'image' : 'file',
+        }));
+
+        // 创建包含 files 数组的用户消息对象
         const userMessage = {
-            id: Date.now(), // 唯一标识
+            id: Date.now(),
             sender: 'user',
             type: 'text',
             content: inputValue.trim() !== '' ? inputValue : null,
             fileIds: uploadedFileIds || [],
+            files, // 包含 files 数组
             createdAt: new Date().toLocaleTimeString(),
         };
 
@@ -286,24 +294,4 @@ const AIGCPage = () => {
         </Box>
     );
 };
-
-// // 示例文件上传函数
-// const uploadFileAndGetUrl = async (file) => {
-//     // 实现实际的文件上传逻辑，这里以 FormData 为例
-//     const formData = new FormData();
-//     formData.append('file', file);
-//
-//     const response = await fetch('YOUR_UPLOAD_ENDPOINT', {
-//         method: 'POST',
-//         body: formData,
-//     });
-//
-//     if (!response.ok) {
-//         throw new Error('文件上传失败');
-//     }
-//
-//     const result = await response.json();
-//     return result.url; // 假设返回的结果中包含文件的 URL
-// };
-
 export default AIGCPage;

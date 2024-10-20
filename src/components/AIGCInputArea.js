@@ -1,5 +1,5 @@
 // src/components/AIGCInputArea.js
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import {
     Box,
     TextField,
@@ -12,6 +12,7 @@ import {
     Typography,
     Snackbar,
     Alert,
+    CircularProgress,
 } from '@mui/material';
 import { AttachFile, Close, Description } from '@mui/icons-material';
 import imageCompression from 'browser-image-compression';
@@ -37,6 +38,9 @@ const AIGCInputArea = ({ onSend }) => {
 
     // 新增状态用于收集上传后的文件ID
     const [uploadedFileIds, setUploadedFileIds] = useState([]);
+
+    // 新增状态用于跟踪每个文件的上传状态
+    const [fileStatuses, setFileStatuses] = useState([]); // 'uploading' | 'uploaded'
 
     // 添加 Snackbar 状态
     const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -64,6 +68,16 @@ const AIGCInputArea = ({ onSend }) => {
         onFileUploaded: (fileId) => {
             // 收集上传后的文件ID
             setUploadedFileIds((prev) => [...prev, fileId]);
+
+            // 更新对应文件的上传状态为 'uploaded'
+            setFileStatuses((prevStatuses) => {
+                const newStatuses = [...prevStatuses];
+                const index = newStatuses.findIndex(status => status === 'uploading');
+                if (index !== -1) {
+                    newStatuses[index] = 'uploaded';
+                }
+                return newStatuses;
+            });
         },
         onClose: () => {
             // 上传完成后的回调，可以根据需要进行处理
@@ -72,10 +86,12 @@ const AIGCInputArea = ({ onSend }) => {
 
     const handleSendClick = () => {
         if (inputValue.trim() === '' && uploadedFileIds.length === 0) {
-            alert('请输入内容或选择要上传的文件。');
+            setSnackbarMessage('请输入内容或选择要上传的文件。');
+            setSnackbarSeverity('warning');
+            setSnackbarOpen(true);
             return;
         }
-        onSend(inputValue, uploadedFileIds,fileType);
+        onSend(inputValue, uploadedFileIds,fileType,selectedFiles);
         setInputValue('');
         setSelectedFiles([]);
         setFileType(null);
@@ -129,6 +145,9 @@ const AIGCInputArea = ({ onSend }) => {
         setFileNames(processedFiles.map((file) => file.name));
         setFileDescriptions(processedFiles.map(() => ''));
 
+        // 初始化 fileStatuses 为 'uploading' for each file
+        setFileStatuses(processedFiles.map(() => 'uploading'));
+
         await handleUploadFiles(processedFiles); // 不传递参数，使用 selectedFiles
     };
 
@@ -160,6 +179,9 @@ const AIGCInputArea = ({ onSend }) => {
         setFileNames(files.map((file) => file.name));
         setFileDescriptions(files.map(() => ''));
 
+        // 初始化 fileStatuses 为 'uploading' for each file
+        setFileStatuses(files.map(() => 'uploading'));
+
         await handleUploadFiles(files); // 不传递参数，使用 selectedFiles
     };
 
@@ -181,20 +203,23 @@ const AIGCInputArea = ({ onSend }) => {
         setFileDescriptions(prevDescs => prevDescs.filter((_, i) => i !== index));
         // 从 uploadedFileIds 中移除对应的文件ID
         setUploadedFileIds(prevIds => prevIds.filter((_, i) => i !== index));
+        // 从 fileStatuses 中移除对应的状态
+        setFileStatuses(prevStatuses => prevStatuses.filter((_, i) => i !== index));
     };
 
     const renderFilePreview = (file, index) => {
         const isImage = file.type.startsWith('image/');
-        if (isImage) {
-            return (
-                <Box
-                    key={index}
-                    sx={{
-                        position: 'relative',
-                        marginRight: 1,
-                        marginBottom: 1,
-                    }}
-                >
+        const status = fileStatuses[index]; // 'uploading' | 'uploaded'
+        return (
+            <Box
+                key={index}
+                sx={{
+                    position: 'relative',
+                    marginRight: 1,
+                    marginBottom: 1,
+                }}
+            >
+                {isImage ? (
                     <img
                         src={URL.createObjectURL(file)}
                         alt={`selected-${index}`}
@@ -206,60 +231,71 @@ const AIGCInputArea = ({ onSend }) => {
                             boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
                         }}
                     />
-                    <IconButton
-                        size="small"
-                        onClick={() => handleRemoveFile(index)}
+                ) : (
+                    <Box
                         sx={{
-                            position: 'absolute',
-                            top: -8,
-                            right: -8,
-                            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            padding: '4px 8px',
+                            border: '1px solid #ccc',
+                            borderRadius: 1,
+                            backgroundColor: '#f5f5f5',
+                            width: 200,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
                         }}
                     >
-                        <Close fontSize="small" />
-                    </IconButton>
-                </Box>
-            );
-        } else {
-            // 对于非图片文件，显示一个图标和文件名
-            return (
-                <Box
-                    key={index}
+                        <Description sx={{ marginRight: 1 }} />
+                        <Typography variant="body2" noWrap>
+                            {file.name}
+                        </Typography>
+                    </Box>
+                )}
+                {/* Remove Button */}
+                <IconButton
+                    size="small"
+                    onClick={() => handleRemoveFile(index)}
                     sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        position: 'relative',
-                        marginRight: 1,
-                        marginBottom: 1,
-                        padding: '4px 8px',
-                        border: '1px solid #ccc',
-                        borderRadius: 1,
-                        backgroundColor: '#f5f5f5',
-                        width: 200,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
+                        position: 'absolute',
+                        top: -8,
+                        right: -8,
+                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
                     }}
                 >
-                    <Description sx={{ marginRight: 1 }} />
-                    <Typography variant="body2" noWrap>
-                        {file.name}
-                    </Typography>
-                    <IconButton
-                        size="small"
-                        onClick={() => handleRemoveFile(index)}
-                        sx={{
-                            position: 'absolute',
-                            top: -8,
-                            right: -8,
-                            backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                        }}
-                    >
-                        <Close fontSize="small" />
-                    </IconButton>
+                    <Close fontSize="small" />
+                </IconButton>
+
+                {/* Overlay for Loading or Success */}
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                        borderRadius: 4,
+                        pointerEvents: 'none',
+                    }}
+                >
+                    {status === 'uploading' && <CircularProgress size={24} />}
+                    {status === 'uploaded' && (
+                        <Box
+                            sx={{
+                                width: 12,
+                                height: 12,
+                                borderRadius: '50%',
+                                backgroundColor: 'green',
+                            }}
+                        />
+                    )}
                 </Box>
-            );
-        }
+            </Box>
+        );
     };
 
     return (
