@@ -17,7 +17,7 @@ const AIGCPage = () => {
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [snackbarSeverity, setSnackbarSeverity] = useState('success');
     const [enableWebSearch, setEnableWebSearch] = useState(false); // 新增: 是否启用联网搜索
-    const [selectedVectorFileId, setSelectedVectorFileId] = useState('');//解析文档的文档ID
+    const [selectedVectorFileIds, setSelectedVectorFileIds] = useState([]);//解析文档的文档ID数组
 
     // 从 KnowledgeBaseContext 获取知识库数据和相关方法
     const { knowledgeBases, loading: kbLoading, error: kbError, fetchKnowledgeBases } = useContext(KnowledgeBaseContext);
@@ -32,9 +32,10 @@ const AIGCPage = () => {
         setSelectedKB(selectedKBId);
         console.log('Selected Knowledge Base ID:', selectedKBId);
     };
-    const handleFileChange = (VectorFileId) => {
-        setSelectedVectorFileId(VectorFileId);
-        console.log('Selected VectorFileId:', VectorFileId);
+    // 处理文件选择变化
+    const handleFileChange = (VectorFileIds) => {
+        setSelectedVectorFileIds(VectorFileIds);
+        console.log('Selected VectorFileIds:', VectorFileIds);
     };
 
     // 处理联网搜索变化
@@ -90,7 +91,7 @@ const AIGCPage = () => {
                 conversation_id: "",
                 user: "abc-123",
                 vector_store_id: selectedKB, // 添加 vector_store_id
-                vector_file_id: selectedVectorFileId || '',
+                vector_file_ids: selectedVectorFileIds,
                 file_ids: uploadedFileIds || [], // 将文件 IDs 传递给后端
                 web_search: enableWebSearch,
                 file_type: '', // 初始化 file_type

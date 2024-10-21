@@ -12,6 +12,7 @@ import {
     FormControlLabel,
     Switch,
     CircularProgress,
+    Chip,
 } from '@mui/material';
 import { styled } from '@mui/system';
 import { KnowledgeBaseContext } from '../context/KnowledgeBaseContext';
@@ -43,7 +44,7 @@ const AIGCFunctionalitySidebar = ({
     const [pipelineOptions, setPipelineOptions] = useState([]);
 
     // 文件选择状态
-    const [selectedFile, setSelectedFile] = useState('');
+    const [selectedFiles, setSelectedFiles] = useState([]);
 
     // 使用 useKnowledgeBaseFiles 钩子，始终传入固定的 knowledgeBaseID
     const {
@@ -83,9 +84,10 @@ const AIGCFunctionalitySidebar = ({
             setSelectedKB('');
             onKnowledgeBaseChange('');
             onWebSearchChange(false);
-            setSelectedFile(''); // 重置文件选择
+            setSelectedFiles([]); // 重置文件选择
+            onFileChange([]); // 通知父组件
         }
-    }, [selectedPipeline, onKnowledgeBaseChange, onWebSearchChange]);
+    }, [selectedPipeline, onKnowledgeBaseChange, onWebSearchChange,onFileChange]);
 
     const handleKBChange = (event) => {
         const value = event.target.value;
@@ -109,13 +111,22 @@ const AIGCFunctionalitySidebar = ({
             onWebSearchChange(isEnabled);
         }
     };
-    const handleFileChange = (event) => {
-        const value = event.target.value;
-        setSelectedFile(value);
+    // const handleFileChange = (event) => {
+    //     const value = event.target.value;
+    //     setSelectedFile(value);
+    //
+    //     if (onFileChange) {
+    //         onFileChange(value);
+    //     }
+    // };
 
-        if (onFileChange) {
-            onFileChange(value);
-        }
+    const handleFileChangeLocal = (event) => {
+        const {
+            target: { value },
+        } = event;
+        const selectedIds = typeof value === 'string' ? value.split(',') : value;
+        setSelectedFiles(selectedIds);
+        onFileChange(selectedIds); // 通知父组件
     };
     // 过滤掉 model_owner 为 'local' 的知识库
     const filteredKnowledgeBases = knowledgeBases
@@ -187,11 +198,21 @@ const AIGCFunctionalitySidebar = ({
                                 <InputLabel id="file-select-label">选择文件</InputLabel>
                                 <Select
                                     labelId="file-select-label"
-                                    value={selectedFile}
-                                    onChange={handleFileChange}
+                                    multiple // 允许多选
+                                    value={selectedFiles}
+                                    onChange={handleFileChangeLocal}
                                     label="选择文件"
+                                    renderValue={(selected) => (
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                            {selected.map((value) => {
+                                                const file = filteredFiles.find(f => f.vector_file_id === value);
+                                                return (
+                                                    <Chip key={value} label={file ? file.file_name : value} />
+                                                );
+                                            })}
+                                        </Box>
+                                    )}
                                 >
-                                    <MenuItem value="">清除选择</MenuItem> {/* 清除选项 */}
                                     {filteredFiles.length > 0 ? (
                                         filteredFiles.map((file) => (
                                             <MenuItem key={file.vector_file_id} value={file.vector_file_id}>
@@ -234,7 +255,6 @@ AIGCFunctionalitySidebar.propTypes = {
     onKnowledgeBaseChange: PropTypes.func,
     onWebSearchChange: PropTypes.func,
     enableWebSearch: PropTypes.bool, // 保持 PropType
-    onFileChange: PropTypes.func, // 新增 PropType
     setSnackbar: PropTypes.func, // 新增 PropType
     onFileChange: PropTypes.func.isRequired,
 };
