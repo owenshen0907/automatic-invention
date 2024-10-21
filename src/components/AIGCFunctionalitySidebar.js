@@ -38,6 +38,8 @@ const AIGCFunctionalitySidebar = ({
                                       enableWebSearch = false, // 接收 enableWebSearch 作为 prop
                                       onFileChange = () => {}, // 新增 prop 以处理文件选择变化
                                       setSnackbar = () => {}, // 新增 prop 以处理 Snackbar 通知
+                                      enableMemory = true,
+                                      onMemoryChange = () => {}, // 新增 prop 以处理记忆功能开关变化
                                   }) => {
     const { knowledgeBases, loading } = useContext(KnowledgeBaseContext);
     const [selectedKB, setSelectedKB] = useState('');
@@ -84,10 +86,11 @@ const AIGCFunctionalitySidebar = ({
             setSelectedKB('');
             onKnowledgeBaseChange('');
             onWebSearchChange(false);
+            onMemoryChange(true); // 重置记忆功能
             setSelectedFiles([]); // 重置文件选择
             onFileChange([]); // 通知父组件
         }
-    }, [selectedPipeline, onKnowledgeBaseChange, onWebSearchChange,onFileChange]);
+    }, [selectedPipeline, onKnowledgeBaseChange, onWebSearchChange,onMemoryChange,onFileChange]);
 
     const handleKBChange = (event) => {
         const value = event.target.value;
@@ -111,14 +114,12 @@ const AIGCFunctionalitySidebar = ({
             onWebSearchChange(isEnabled);
         }
     };
-    // const handleFileChange = (event) => {
-    //     const value = event.target.value;
-    //     setSelectedFile(value);
-    //
-    //     if (onFileChange) {
-    //         onFileChange(value);
-    //     }
-    // };
+    const handleMemoryToggle = (event) => {
+        const isEnabled = event.target.checked;
+        if (onMemoryChange) {
+            onMemoryChange(isEnabled);
+        }
+    };
 
     const handleFileChangeLocal = (event) => {
         const {
@@ -239,7 +240,20 @@ const AIGCFunctionalitySidebar = ({
                                     color="primary"
                                 />
                             }
-                            label="是否启用联网搜索"
+                            label="是否启用联网"
+                        />
+                    </Box>
+                    {/* 是否启用记忆 */}
+                    <Box sx={{ marginBottom: 3 }}>
+                        <FormControlLabel
+                            control={
+                                <Switch
+                                    checked={enableMemory} // 使用来自父组件的值
+                                    onChange={handleMemoryToggle}
+                                    color="primary"
+                                />
+                            }
+                            label="是否启用记忆"
                         />
                     </Box>
                 </>
@@ -257,6 +271,8 @@ AIGCFunctionalitySidebar.propTypes = {
     enableWebSearch: PropTypes.bool, // 保持 PropType
     setSnackbar: PropTypes.func, // 新增 PropType
     onFileChange: PropTypes.func.isRequired,
+    enableMemory: PropTypes.bool, // 新增 PropType
+    onMemoryChange: PropTypes.func, // 新增 PropType
 };
 
 export default AIGCFunctionalitySidebar;

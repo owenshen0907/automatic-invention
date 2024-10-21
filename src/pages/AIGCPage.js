@@ -18,6 +18,18 @@ const AIGCPage = () => {
     const [snackbarSeverity, setSnackbarSeverity] = useState('success');
     const [enableWebSearch, setEnableWebSearch] = useState(false); // 新增: 是否启用联网搜索
     const [selectedVectorFileIds, setSelectedVectorFileIds] = useState([]);//解析文档的文档ID数组
+    const [enableMemory, setEnableMemory] = useState(true);
+
+    // 定义 setSnackbar 函数
+    const setSnackbar = (message, severity = 'success') => {
+        setSnackbarMessage(message);
+        setSnackbarSeverity(severity);
+        setSnackbarOpen(true);
+    };
+    const handleMemoryChange = (newValue) => {
+        setEnableMemory(newValue);
+        // 其他逻辑，例如显示通知
+    };
 
     // 从 KnowledgeBaseContext 获取知识库数据和相关方法
     const { knowledgeBases, loading: kbLoading, error: kbError, fetchKnowledgeBases } = useContext(KnowledgeBaseContext);
@@ -278,6 +290,9 @@ const AIGCPage = () => {
                     onWebSearchChange={handleWebSearchChange} // 传递联网搜索变化回调
                     enableWebSearch={enableWebSearch} // 传递当前的 web_search 状态
                     onFileChange={handleFileChange} // Add this line
+                    enableMemory={enableMemory}
+                    onMemoryChange={handleMemoryChange}
+                    setSnackbar={setSnackbar} // 传递 setSnackbar
                 />
             </Paper>
             {/* 错误提示 */}
