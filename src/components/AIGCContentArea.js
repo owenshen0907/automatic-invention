@@ -2,6 +2,10 @@ import React, { useEffect, useRef } from 'react';
 import { Typography, Box, Avatar } from '@mui/material';
 import { styled } from '@mui/system';
 import { Description } from '@mui/icons-material';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import userAvatar from '../assets/user-avatar.png'; // 用户头像图片
 import botAvatar from '../assets/bot-avatar.png'; // 机器人头像图片
 
@@ -16,13 +20,33 @@ const MessageContainer = styled(Box)(({ theme, sender }) => ({
 }));
 
 const MessageBubble = styled(Box)(({ theme, sender }) => ({
-    maxWidth: sender === 'user' ? '70%' : '90%',
+    maxWidth: sender === 'user' ? '70%' : '100%',
     padding: theme.spacing(1, 2),
     borderRadius: 16,
     backgroundColor: sender === 'user' ? '#FFC0CB' : theme.palette.grey[300], // 用户消息设置为浅粉色
     color: sender === 'user' ? '#fff' : '#000',
     wordBreak: 'break-word', // 防止长单词或链接导致布局问题
 }));
+
+const renderers = {
+    code({ node, inline, className, children, ...props }) {
+        const match = /language-(\w+)/.exec(className || '');
+        return !inline && match ? (
+            <SyntaxHighlighter
+                style={oneDark}
+                language={match[1]}
+                PreTag="div"
+                {...props}
+            >
+                {String(children).replace(/\n$/, '')}
+            </SyntaxHighlighter>
+        ) : (
+            <code className={className} {...props}>
+                {children}
+            </code>
+        );
+    },
+};
 
 const AIGCContentArea = ({ messages, loading }) => {
     const contentEndRef = useRef(null);
@@ -62,10 +86,12 @@ const AIGCContentArea = ({ messages, loading }) => {
                     <MessageBubble sender={msg.sender}>
                         {/* 文本内容 */}
                         {msg.content && (
-                            <Typography variant="body1">
-                                {msg.content}
-                                {loading && msg.sender === 'bot' && '_'}
-                            </Typography>
+                            <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={renderers}
+                            >
+                                {`${msg.content}${loading && msg.sender === 'bot' ? '_' : ''}`}
+                            </ReactMarkdown>
                         )}
                         {/* 文件或图片缩略图 */}
                         {msg.files && msg.files.length > 0 && (
