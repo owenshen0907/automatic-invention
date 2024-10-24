@@ -89,15 +89,16 @@ const KnowledgeCenterPage = () => {
                 height: '100vh',
                 padding: 0,
                 backgroundColor: '#f0f2f5',
+                justifyContent: 'center', // 居中对齐内容
             }}
         >
-            {/* 主内容区域 */}
-            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+            {/* 知识库主内容区域 */}
+            <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column',top:0 }}>
                 <Paper
-                    elevation={3}
+                    elevation={1}
                     sx={{
                         flexGrow: 1,
-                        padding: 2,
+                        padding: 1,
                         boxSizing: 'border-box',
                         borderRadius: 2,
                         backgroundColor: '#ffffff',
@@ -106,16 +107,16 @@ const KnowledgeCenterPage = () => {
                         height: '100%',
                     }}
                 >
-                    {/* Header Section */}
+                    {/* 知识中心：Header Section */}
                     <Box
                         sx={{
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
-                            mb: 2,
-                            p: 2,
+                            mb: 0,
+                            p: 1,
                             backgroundColor: '#fff0ff',
-                            borderRadius: '8px',
+                            borderRadius: '1px',
                             boxShadow: 1,
                         }}
                     >
@@ -126,7 +127,7 @@ const KnowledgeCenterPage = () => {
                                 variant="contained"
                                 color="success"
                                 onClick={() => setOpenCreateDialog(true)}
-                                sx={{ mr: 2 }}
+                                sx={{ mr: 1 }}
                             >
                                 创建知识库
                             </Button>
@@ -147,8 +148,9 @@ const KnowledgeCenterPage = () => {
                             display: 'flex',
                             flexGrow: 1,
                             flexDirection: 'column',
-                            gap: 2,
-                            overflow: 'hidden',
+                            gap: 1,
+                            // overflow: 'hidden',
+                            p: 0, // 为内容区域添加统一的内边距
                         }}
                     >
                         {/* KnowledgeBaseList 部分 */}

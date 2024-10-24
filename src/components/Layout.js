@@ -19,7 +19,7 @@ const Layout = ({children,updateSnackbar }) => {
                 component="main"
                 sx={{
                     flexGrow: 1,
-                    p: 3,
+                    p: 1,
                     display: 'flex',
                     flexDirection: 'column',
                     height: `calc(100vh - ${appBarHeight}px)`,

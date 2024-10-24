@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import {
     Box,
     Typography,
-    Grid,
     Card,
     CardContent,
     Chip,
@@ -78,7 +77,7 @@ const KnowledgeBaseList = ({
     };
 
     return (
-        <Box sx={{ flexGrow: 1, p: { xs: 1, sm: 2, md: 3 } }}>
+        <Box sx={{ flexGrow: 1, p: 1, overflow: 'visible'  }}>
             {/* UploadFile 组件 */}
             {selectedKBForUpload && (
                 <UploadFile
@@ -109,133 +108,145 @@ const KnowledgeBaseList = ({
             </Snackbar>
 
             {/* KnowledgeBaseList 内容 */}
-            <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
-                <Grid container spacing={2}>
-                    {paginatedKnowledgeBases.map((kb) => (
-                        <Grid
-                            item
-                            key={kb.id}
-                            xs={12}
-                            sm={6}
-                            md={4}
-                            lg={2}
+            <Box sx={{ display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                gap: 1, // 控制卡片之间的间距
+                padding: '0 8px',
+                // margintop: 1, // 控制卡片之间的间距
+                overflowX: 'auto', // 当内容超过容器宽度时，启用横向滚动
+                alignItems: 'start', // 确保卡片从顶部对齐
+                }}>
+                {paginatedKnowledgeBases.map((kb) => (
+                    <Box
+                        key={kb.id}
+                        sx={{
+                            overflow: 'visible',
+                            position: 'relative',
+                            zIndex: 10,
+                        }}
+                    >
+                        <Card
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                minWidth: '320px', // 设置最小宽度
+                                aspectRatio: '320 / 208', // 设置宽高比
+                                boxShadow: 3,
+                                borderRadius: 2,
+                                transition: 'transform 0.2s, box-shadow 0.2s',
+                                backgroundColor:
+                                    kb.model_owner === 'local' ? '#e0f7fa' : '#fff9ff',
+                                '&:hover': {
+                                    transform: 'scale(1.03)', // 放大卡片
+                                    boxShadow: 3, // 增加阴影以增强视觉效果
+                                    zIndex: 100, // 提高 z-index 确保在悬停时在最上层
+                                    position: 'relative',
+                                },
+                                margin: 0,
+                                padding: 1,
+                            }}
                         >
-                            <Card
+                            {/* 所属模型和创建者 ID 显示及操作按钮 */}
+                            <Box
                                 sx={{
                                     display: 'flex',
-                                    flexDirection: 'column',
-                                    height: '100%',
-                                    boxShadow: 6,
-                                    borderRadius: 2,
-                                    transition: 'transform 0.2s',
-                                    backgroundColor:
-                                        kb.model_owner === 'local' ? '#e0f7fa' : '#fff9ff',
-                                    '&:hover': {
-                                        transform: 'scale(1.02)',
-                                    },
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    p: 2,
+                                    backgroundColor: '#f5f5f5',
+                                    borderTopLeftRadius: '8px',
+                                    borderTopRightRadius: '8px',
                                 }}
                             >
-                                {/* 所属模型和创建者 ID 显示及操作按钮（移动到顶部） */}
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        p: 2,
-                                        backgroundColor: '#f5f5f5',
-                                        borderTopLeftRadius: '8px',
-                                        borderTopRightRadius: '8px',
-                                    }}
-                                >
-                                    <Box>
-                                        <Typography variant="caption" color="text.secondary">
-                                            模型: {kb.model_owner || '未知模型'}
-                                        </Typography>
-                                        <Typography variant="caption" color="text.secondary">
-                                            创建者ID: {kb.creator_id || '未知创建者'}
-                                        </Typography>
-                                    </Box>
-                                    <Box>
-                                        <IconButton
-                                            onClick={() => onEditKnowledgeBase(kb)}
-                                            color="primary"
-                                            size="small"
-                                            aria-label="edit"
-                                        >
-                                            <EditIcon fontSize="small" />
-                                        </IconButton>
-                                        <IconButton
-                                            onClick={() => onSelectKnowledgeBase(kb)}
-                                            color="secondary"
-                                            size="small"
-                                            aria-label="manage"
-                                        >
-                                            <ManageAccountsIcon fontSize="small" />
-                                        </IconButton>
-                                        <IconButton
-                                            onClick={() => handleOpenUploadDialog(kb)}
-                                            color="default"
-                                            size="small"
-                                            aria-label="upload"
-                                        >
-                                            <UploadFileIcon fontSize="small" />
-                                        </IconButton>
-                                    </Box>
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary">
+                                        模型: {kb.model_owner || '未知模型'}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        创建者ID: {kb.creator_id || '未知创建者'}
+                                    </Typography>
                                 </Box>
-                                <CardContent
+                                <Box>
+                                    <IconButton
+                                        onClick={() => onEditKnowledgeBase(kb)}
+                                        color="primary"
+                                        size="small"
+                                        aria-label="edit"
+                                    >
+                                        <EditIcon fontSize="small" />
+                                    </IconButton>
+                                    <IconButton
+                                        onClick={() => onSelectKnowledgeBase(kb)}
+                                        color="secondary"
+                                        size="small"
+                                        aria-label="manage"
+                                    >
+                                        <ManageAccountsIcon fontSize="small" />
+                                    </IconButton>
+                                    <IconButton
+                                        onClick={() => handleOpenUploadDialog(kb)}
+                                        color="default"
+                                        size="small"
+                                        aria-label="upload"
+                                    >
+                                        <UploadFileIcon fontSize="small" />
+                                    </IconButton>
+                                </Box>
+                            </Box>
+                            <CardContent
+                                sx={{
+                                    flexGrow: 1,
+                                    p: 1,
+                                    backgroundColor: '#ffffff',
+                                    borderRadius: '0 0 8px 8px',
+                                    overflow: 'hidden', // 防止内容溢出
+                                }}
+                            >
+                                <Typography variant="h6" component="div" gutterBottom>
+                                    {kb.display_name}
+                                    <Typography
+                                        component="span"
+                                        variant="subtitle2"
+                                        color="text.secondary"
+                                    >
+                                        {' '}
+                                        ({kb.name})({kb.id})
+                                    </Typography>
+                                </Typography>
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
                                     sx={{
-                                        flexGrow: 1,
-                                        p: 2,
-                                        backgroundColor: '#ffffff',
-                                        borderRadius: '0 0 8px 8px',
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 3,
+                                        WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        mb: 1,
                                     }}
                                 >
-                                    <Typography variant="h6" component="div" gutterBottom>
-                                        {kb.display_name}
-                                        <Typography
-                                            component="span"
-                                            variant="subtitle2"
-                                            color="text.secondary"
-                                        >
-                                            {' '}
-                                            ({kb.name})({kb.id})
-                                        </Typography>
-                                    </Typography>
-                                    <Typography
-                                        variant="body2"
-                                        color="text.secondary"
-                                        sx={{
-                                            display: '-webkit-box',
-                                            WebkitLineClamp: 3,
-                                            WebkitBoxOrient: 'vertical',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            mb: 1,
-                                        }}
-                                    >
-                                        {kb.description || '暂无描述'}
-                                    </Typography>
-                                    <Box sx={{ mt: 1 }}>
-                                        {kb.tags &&
-                                            kb.tags.split(',').map((tag, index) => (
-                                                <Chip
-                                                    key={index}
-                                                    label={tag}
-                                                    size="small"
-                                                    sx={{ mr: 0.5, mb: 0.5 }}
-                                                />
-                                            ))}
-                                    </Box>
-                                </CardContent>
-                            </Card>
-                        </Grid>
-                    ))}
-                </Grid>
+                                    {kb.description || '暂无描述'}
+                                </Typography>
+                                <Box sx={{ mt: 1 }}>
+                                    {kb.tags &&
+                                        kb.tags.split(',').map((tag, index) => (
+                                            <Chip
+                                                key={index}
+                                                label={tag}
+                                                size="small"
+                                                sx={{ mr: 0.5, mb: 0.5 }}
+                                            />
+                                        ))}
+                                </Box>
+                            </CardContent>
+                        </Card>
+                    </Box>
+                ))}
             </Box>
 
             {/* 分页控件 */}
             {totalPages > 1 && (
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
                     <Pagination
                         count={totalPages}
                         page={currentPage}
@@ -248,6 +259,7 @@ const KnowledgeBaseList = ({
             )}
         </Box>
     );
+
 };
 
 export default KnowledgeBaseList;
