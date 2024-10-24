@@ -1,15 +1,39 @@
 // src/pages/AIGCPage.jsx
 
-import React, { useState, useCallback, useContext } from 'react';
-import { Box, Paper, Snackbar, Alert } from '@mui/material';
+import React, { useState, useContext, useEffect } from 'react';
+import {
+    Box,
+    Paper,
+    Snackbar,
+    Alert,
+    Button,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogContentText,
+    DialogActions,
+    TextField,
+    MenuItem,
+    Select,
+    InputLabel,
+    FormControl,
+    Slide, // 引入 Slide 组件用于动画
+    Typography,
+    IconButton,
+} from '@mui/material';
+import { Save as SaveIcon, Clear as ClearIcon, KeyboardArrowUp as KeyboardArrowUpIcon} from '@mui/icons-material';
+import { v4 as uuidv4 } from 'uuid'; // 安装 uuid 库用于生成唯一 ID
 import AIGCContentArea from '../components/AIGCContentArea';
 import AIGCInputArea from '../components/AIGCInputArea';
 import AIGCFunctionalitySidebar from '../components/AIGCFunctionalitySidebar';
+import HoverSlide from '../components/common/HoverSlide'; // 引入通用 HoverSlide 组件
+import HoverButtonGroup from '../components/common/HoverButtonGroup'; // 引入 HoverButtonGroup 组件
+import HoverSystemPrompt from '../components/common/HoverSystemPrompt'; // 引入 HoverSystemPrompt 组件
 import { KnowledgeBaseContext } from '../context/KnowledgeBaseContext';
 
 const AIGCPage = () => {
-    const [messages, setMessages] = useState([]); // 消息数组
-    const [loading, setLoading] = useState(false);
+    const [messages, setMessages] = useState([]); // 当前对话消息
+    const [loading, setLoading] = useState(false);//初始为空
     const [error, setError] = useState(null);
     const [selectedPipeline, setSelectedPipeline] = useState(''); // 初始为空
     const [selectedKB, setSelectedKB] = useState(''); // 新增：选中的知识库 ID
@@ -19,7 +43,13 @@ const AIGCPage = () => {
     const [enableWebSearch, setEnableWebSearch] = useState(false); // 新增: 是否启用联网搜索
     const [selectedVectorFileIds, setSelectedVectorFileIds] = useState([]);//解析文档的文档ID数组
     const [enableMemory, setEnableMemory] = useState(true);
+    const [systemPrompt, setSystemPrompt] = useState(''); // 父组件管理 systemPrompt 状态
 
+    // 新增状态变量
+    const [conversations, setConversations] = useState([]); // 已保存的对话列表
+    const [selectedConversationId, setSelectedConversationId] = useState('');
+    const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+    const [newConversationName, setNewConversationName] = useState('');
     // 定义 setSnackbar 函数
     const setSnackbar = (message, severity = 'success') => {
         setSnackbarMessage(message);
@@ -55,6 +85,28 @@ const AIGCPage = () => {
         setEnableWebSearch(isEnabled); // 更新启用联网搜索的状态
         console.log('Enable Web Search:', isEnabled);
     };
+    // 辅助函数：将 messages 转换为 StepFunMessage 结构，仅包含文本内容
+    const transformMessagesToStepFun = (messages) => {
+        return messages.map(msg => {
+            if (msg.sender === 'user') {
+                return {
+                    role: 'user',
+                    content: msg.content ? msg.content : '', // 仅包含文本内容
+                };
+            } else if (msg.sender === 'bot') {
+                return {
+                    role: 'assistant',
+                    content: msg.content ? msg.content : '', // 仅包含文本内容
+                };
+            } else {
+                // 如果有系统消息
+                return {
+                    role: 'system',
+                    content: typeof msg.content === 'string' ? msg.content : '',
+                };
+            }
+        }).filter(msg => msg.content); // 过滤掉内容为空的消息
+    };
 
     // 发送消息的处理函数
     const handleSend = async (inputValue, uploadedFileIds,fileType,selectedFiles) => {
@@ -75,7 +127,7 @@ const AIGCPage = () => {
 
         // 创建包含 files 数组的用户消息对象
         const userMessage = {
-            id: Date.now(),
+            id: uuidv4(),
             sender: 'user',
             type: 'text',
             content: inputValue.trim() !== '' ? inputValue : null,
@@ -94,10 +146,11 @@ const AIGCPage = () => {
         try {
             // 获取选中的知识库详情
             const selectedKnowledgeBase = knowledgeBases.find(kb => kb.id === selectedKB);
-
+            const systemPromptContent = systemPrompt.trim(); // 直接使用系统提示内容，可以为空
             // 构建调用 API 的请求数据
             const data = {
                 inputs: {},
+                system_prompt: systemPromptContent,
                 query: inputValue,
                 response_mode: "streaming",
                 conversation_id: "",
@@ -120,6 +173,10 @@ const AIGCPage = () => {
                 const { name, description } = selectedKnowledgeBase;
                 if (name) data.name = name;
                 if (description) data.description = description;
+            }
+            // 如果启用了记忆功能，则添加对话历史，仅包含文本内容
+            if (enableMemory) {
+                data.conversation_history = transformMessagesToStepFun(messages);
             }
             console.log('发送数据:', data);
 
@@ -212,7 +269,7 @@ const AIGCPage = () => {
                                         return [
                                             ...prevMessages,
                                             {
-                                                id: Date.now() + Math.random(), // 唯一标识
+                                                id: uuidv4(), // 唯一标识
                                                 sender: 'bot',
                                                 content: content,
                                                 createdAt: new Date().toLocaleTimeString(),
@@ -246,10 +303,95 @@ const AIGCPage = () => {
         setSnackbarOpen(false);
     };
 
+    // 在组件挂载时加载已保存的对话和当前对话
+    useEffect(() => {
+        // 加载已保存的对话列表
+        const cachedConversations = localStorage.getItem('aigcConversations');
+        if (cachedConversations) {
+            setConversations(JSON.parse(cachedConversations));
+        }
+        // 加载当前对话消息
+        const cachedMessages = localStorage.getItem('aigcCurrentMessages');
+        if (cachedMessages) {
+            setMessages(JSON.parse(cachedMessages));
+        }
+        const cachedSystemPrompt = localStorage.getItem('aigcSystemPrompt');
+        if (cachedSystemPrompt !== null) { // 存在，即使为空
+            setSystemPrompt(cachedSystemPrompt);
+        } else {
+            setSystemPrompt(''); // 初始化为空，让子组件设置默认值
+        }
+    }, []);
+
+    // 在 messages 和 systemPrompt 状态变化时保存当前对话和系统提示
+    useEffect(() => {
+        localStorage.setItem('aigcCurrentMessages', JSON.stringify(messages));
+        localStorage.setItem('aigcSystemPrompt', systemPrompt);
+    }, [messages, systemPrompt]);
+
+    // 在 conversations 状态变化时保存已保存的对话列表
+    useEffect(() => {
+        localStorage.setItem('aigcConversations', JSON.stringify(conversations));
+    }, [conversations]);
+
+    // 新增：保存对话函数
+    const handleSaveConversation = () => {
+        setSaveDialogOpen(true);
+    };
+
+    const handleCloseSaveDialog = () => {
+        setSaveDialogOpen(false);
+        setNewConversationName('');
+    };
+
+
+    const handleConfirmSaveConversation = () => {
+        if (newConversationName.trim() === '') {
+            setSnackbar('对话名称不能为空。', 'warning');
+            return;
+        }
+
+        // 创建新的对话对象
+        const newConversation = {
+            id: uuidv4(),
+            name: newConversationName.trim(),
+            messages: messages,
+            timestamp: new Date().toISOString(),
+        };
+
+        // 更新对话列表
+        setConversations(prevConversations => [...prevConversations, newConversation]);
+
+        setSnackbar('对话已保存。', 'success');
+        handleCloseSaveDialog();
+    };
+
+    // 新增：选择对话函数
+    const handleSelectConversation = (event) => {
+        const conversationId = event.target.value;
+        setSelectedConversationId(conversationId);
+
+        const selectedConversation = conversations.find(conv => conv.id === conversationId);
+        if (selectedConversation) {
+            setMessages(selectedConversation.messages);
+            setSnackbar(`已加载对话：“${selectedConversation.name}”。`, 'success');
+        } else {
+            setSnackbar('未找到选定的对话。', 'error');
+        }
+    };
+
+
+    // 新增：清空当前对话函数
+    const handleClearChat = () => {
+        setMessages([]);
+        localStorage.removeItem('aigcCurrentMessages');
+        setSnackbar('当前对话已清空。', 'info');
+    };
+
     return (
-        <Box sx={{ display: 'flex', flexGrow: 1, height: '100vh', overflow: 'hidden' }}>
+        <Box sx={{ display: 'flex', flexGrow: 1, height: '100vh', overflow: 'hidden',position: 'relative' }}>
             {/* 左侧内容区域与输入框 */}
-            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', mr: 2 }}>
+            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', mr: 2, minWidth: 0 }}>
                 <Paper
                     elevation={3}
                     sx={{
@@ -262,8 +404,50 @@ const AIGCPage = () => {
                         display: 'flex',
                         flexDirection: 'column',
                         overflowX: 'hidden', // 防止水平溢出
+                        position: 'relative', // 为按钮容器定位做准备
+                        minWidth: 0, // 防止收缩
                     }}
                 >
+                    {/* 右上角 HoverSlide 控制按钮组 HoverButtonGroup  */}
+                    <HoverSlide
+                        triggerWidth="20%" // 根据需要调整触发区域宽度
+                        triggerHeight="5px"
+                        triggerColor="#cccccc"
+                        slideDirection="down"
+                        position="absolute"
+                        top={0}
+                        right={0}
+                        display="flex"
+                        sx={{
+                            zIndex: 10, // 确保 z-index 足够高
+                        }}
+
+                    >
+                        <HoverButtonGroup
+                            onSave={handleSaveConversation}
+                            conversations={conversations}
+                            selectedConversationId={selectedConversationId}
+                            onSelectConversation={handleSelectConversation}
+                            onClearChat={handleClearChat}
+                        />
+                    </HoverSlide>
+
+                    {/* 中间上方 HoverSlide 控制系统提示输入框 */}
+                    <HoverSlide
+                        triggerWidth="60%" // 根据需要调整触发区域宽度
+                        triggerHeight="5px"
+                        triggerColor="#555"
+                        slideDirection="down"
+                        position="absolute"
+                        top={16}
+                        left="50%"
+                        sx={{ transform: 'translateX(-50%)' , zIndex: 10,top: 0,}}
+                    >
+                        <HoverSystemPrompt
+                            systemPrompt={systemPrompt} // 传递 systemPrompt
+                            setSystemPrompt={setSystemPrompt} // 传递 setSystemPrompt
+                        />
+                    </HoverSlide>
                     <AIGCContentArea messages={messages} loading={loading} />
                 </Paper>
                 <Box sx={{ height: '10px' }} /> {/* 增加间距 */}
@@ -307,6 +491,37 @@ const AIGCPage = () => {
                     {snackbarMessage}
                 </Alert>
             </Snackbar>
+            {/* 保存对话对话框 */}
+            <Dialog
+                open={saveDialogOpen}
+                onClose={handleCloseSaveDialog}
+                aria-labelledby="save-conversation-dialog-title"
+                aria-describedby="save-conversation-dialog-description"
+            >
+                <DialogTitle id="save-conversation-dialog-title">保存当前对话</DialogTitle>
+                <DialogContent>
+                    <DialogContentText id="save-conversation-dialog-description">
+                        请输入对话名称，以便将当前对话保存为一个会话。
+                    </DialogContentText>
+                    <TextField
+                        autoFocus
+                        margin="dense"
+                        id="conversation-name"
+                        label="对话名称"
+                        type="text"
+                        fullWidth
+                        variant="outlined"
+                        value={newConversationName}
+                        onChange={(e) => setNewConversationName(e.target.value)}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseSaveDialog}>取消</Button>
+                    <Button onClick={handleConfirmSaveConversation} color="primary">
+                        保存
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 };

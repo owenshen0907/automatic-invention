@@ -1,3 +1,4 @@
+// src/components/AIGCContentArea.jsx
 import React, { useEffect, useRef } from 'react';
 import { Typography, Box, Avatar } from '@mui/material';
 import { styled } from '@mui/system';
@@ -26,6 +27,9 @@ const MessageBubble = styled(Box)(({ theme, sender }) => ({
     backgroundColor: sender === 'user' ? '#FFC0CB' : theme.palette.grey[300], // 用户消息设置为浅粉色
     color: sender === 'user' ? '#fff' : '#000',
     wordBreak: 'break-word', // 防止长单词或链接导致布局问题
+    overflowWrap: 'break-word', // 处理长单词的换行
+    whiteSpace: 'pre-wrap', // 保留空白符并允许自动换行
+    overflow: 'hidden', // 隐藏溢出内容
 }));
 
 const renderers = {
@@ -46,6 +50,23 @@ const renderers = {
             </code>
         );
     },
+    a: ({ node, ...props }) => (
+        <a
+            {...props}
+            style={{
+                wordBreak: 'break-word',
+                overflowWrap: 'break-word',
+                // 添加其他样式以确保链接换行
+            }}
+            target="_blank"
+            rel="noopener noreferrer"
+        >
+            {props.children}
+        </a>
+    ),
+    p: ({ node, ...props }) => (
+        <Typography variant="body1" component="p" {...props} />
+    ),
 };
 
 const AIGCContentArea = ({ messages, loading }) => {
@@ -62,7 +83,7 @@ const AIGCContentArea = ({ messages, loading }) => {
             sx={{
                 display: 'flex',
                 flexDirection: 'column',
-                height: '100%',
+                flexGrow: 1,
                 overflowY: 'auto',
                 paddingLeft: `${fixedAvatarDistance}px`,
                 paddingRight: `${fixedAvatarDistance}px`,

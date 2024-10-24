@@ -1,5 +1,4 @@
 // src/components/AIGCFunctionalitySidebar.jsx
-
 import React, { useState, useEffect, useContext } from 'react';
 import PropTypes from 'prop-types';
 import {
@@ -13,21 +12,36 @@ import {
     Switch,
     CircularProgress,
     Chip,
+    Tooltip,
+    IconButton,
 } from '@mui/material';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { styled } from '@mui/system';
 import { KnowledgeBaseContext } from '../context/KnowledgeBaseContext';
-import useKnowledgeBaseFiles from '../hooks/useKnowledgeBaseFiles'; // Import the custom hook
+import useKnowledgeBaseFiles from '../hooks/useKnowledgeBaseFiles';
 
-// 自定义样式
 const SidebarContainer = styled(Box)(({ theme }) => ({
-    padding: theme.spacing(2),
+    padding: theme.spacing(1),
     backgroundColor: theme.palette.background.default,
-    height: '100%',
+    height: '100%', // 确保高度填满
+    width: 240, // 确保宽度与导航侧边栏一致
     overflowY: 'auto',
+    display: 'flex',            // 使用 flex 布局
+    flexDirection: 'column',    // 使子元素垂直排列
+    alignItems: 'flex-start',       // 居中子元素
+}));
+
+const Header = styled(Box)(({ theme }) => ({
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing(2),
 }));
 
 const FormControlStyled = styled(FormControl)(({ theme }) => ({
     backgroundColor: '#f9f9f9',
+    width: 190, // 确保选择框占满宽度
+    margin: '0 auto', // 水平居中
 }));
 
 const AIGCFunctionalitySidebar = ({
@@ -35,28 +49,19 @@ const AIGCFunctionalitySidebar = ({
                                       onPipelineChange = () => {},
                                       onKnowledgeBaseChange = () => {},
                                       onWebSearchChange = () => {},
-                                      enableWebSearch = false, // 接收 enableWebSearch 作为 prop
-                                      onFileChange = () => {}, // 新增 prop 以处理文件选择变化
-                                      setSnackbar = () => {}, // 新增 prop 以处理 Snackbar 通知
+                                      enableWebSearch = false,
+                                      onFileChange = () => {},
+                                      setSnackbar = () => {},
+                                      updateSnackbar = () => {},
                                       enableMemory = true,
-                                      onMemoryChange = () => {}, // 新增 prop 以处理记忆功能开关变化
+                                      onMemoryChange = () => {},
                                   }) => {
-    const { knowledgeBases, loading } = useContext(KnowledgeBaseContext);
+    const { knowledgeBases, loading: kbLoading, refreshKnowledgeBases } = useContext(KnowledgeBaseContext);
     const [selectedKB, setSelectedKB] = useState('');
     const [pipelineOptions, setPipelineOptions] = useState([]);
-
-    // 文件选择状态
     const [selectedFiles, setSelectedFiles] = useState([]);
+    const { files, loading: filesLoading, fetchFiles } = useKnowledgeBaseFiles('local20241015145535', true, setSnackbar);
 
-    // 使用 useKnowledgeBaseFiles 钩子，始终传入固定的 knowledgeBaseID
-    const {
-        files,
-        loading: filesLoading,
-        fetchFiles,
-    } = useKnowledgeBaseFiles('local20241015145535', true, setSnackbar);
-    // 说明：
-    // - 始终获取 'local20241015145535' 的文件，与知识库选择无关。
-    // 加载 Pipeline 选项
     useEffect(() => {
         const pipelineOptionsFromEnv = process.env.REACT_APP_PIPELINE_OPTIONS;
         console.log('pipelineOptionsFromEnv:', pipelineOptionsFromEnv);
@@ -70,7 +75,7 @@ const AIGCFunctionalitySidebar = ({
 
                 if (parsedOptions.length > 0 && !selectedPipeline) {
                     const defaultPipeline = parsedOptions[0].value;
-                    onPipelineChange(defaultPipeline); // 设置默认值
+                    onPipelineChange(defaultPipeline);
                 }
             } catch (error) {
                 console.error('解析 REACT_APP_PIPELINE_OPTIONS 失败:', error);
@@ -80,17 +85,16 @@ const AIGCFunctionalitySidebar = ({
         }
     }, [selectedPipeline, onPipelineChange]);
 
-    // 随着 pipeline 的改变，重置功能区的内容
     useEffect(() => {
         if (selectedPipeline !== 'StepFun') {
             setSelectedKB('');
             onKnowledgeBaseChange('');
             onWebSearchChange(false);
-            onMemoryChange(true); // 重置记忆功能
-            setSelectedFiles([]); // 重置文件选择
-            onFileChange([]); // 通知父组件
+            onMemoryChange(true);
+            setSelectedFiles([]);
+            onFileChange([]);
         }
-    }, [selectedPipeline, onKnowledgeBaseChange, onWebSearchChange,onMemoryChange,onFileChange]);
+    }, [selectedPipeline, onKnowledgeBaseChange, onWebSearchChange, onMemoryChange, onFileChange]);
 
     const handleKBChange = (event) => {
         const value = event.target.value;
@@ -114,6 +118,7 @@ const AIGCFunctionalitySidebar = ({
             onWebSearchChange(isEnabled);
         }
     };
+
     const handleMemoryToggle = (event) => {
         const isEnabled = event.target.checked;
         if (onMemoryChange) {
@@ -122,34 +127,61 @@ const AIGCFunctionalitySidebar = ({
     };
 
     const handleFileChangeLocal = (event) => {
-        const {
-            target: { value },
-        } = event;
+        const { target: { value } } = event;
         const selectedIds = typeof value === 'string' ? value.split(',') : value;
         setSelectedFiles(selectedIds);
-        onFileChange(selectedIds); // 通知父组件
+        onFileChange(selectedIds);
     };
-    // 过滤掉 model_owner 为 'local' 的知识库
+
+    const [refreshing, setRefreshing] = useState(false);
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        try {
+            if (refreshKnowledgeBases) {
+                await refreshKnowledgeBases();
+            }
+            if (fetchFiles) {
+                await fetchFiles();
+            }
+            updateSnackbar({ message: '刷新成功', severity: 'success' });
+        } catch (error) {
+            console.error('刷新数据失败:', error);
+            updateSnackbar({ message: '刷新失败', severity: 'error' });
+        } finally {
+            setRefreshing(false);
+        }
+    };
+
     const filteredKnowledgeBases = knowledgeBases
         ? knowledgeBases.filter((kb) => kb.model_owner !== 'local')
         : [];
-    // 过滤文件，只显示有 vector_file_id 的文件
     const filteredFiles = files ? files.filter((file) => file.vector_file_id) : [];
 
-    // 调试：日志输出选中的知识库和过滤后的文件
     useEffect(() => {
         console.log('Selected KB:', selectedKB);
-        // console.log('Filtered Files:', filteredFiles);
-    }, [selectedKB]);
+    }, [selectedKB, filteredFiles]);
+
 
     return (
         <SidebarContainer>
-            <Typography variant="h5" gutterBottom>
-                功能区
-            </Typography>
+            <Header>
+                <Typography variant="h5">功能区</Typography>
+                <Tooltip title="刷新">
+                    <span>
+                        <IconButton
+                            onClick={handleRefresh}
+                            disabled={refreshing || kbLoading || filesLoading}
+                            size="small"
+                            aria-label="refresh"
+                        >
+                            {refreshing ? <CircularProgress size={20} /> : <RefreshIcon />}
+                        </IconButton>
+                    </span>
+                </Tooltip>
+            </Header>
 
             {/* Pipeline 选择 */}
-            <Box sx={{ marginBottom: 3 }}>
+            <Box sx={{ marginBottom: 3, width: '100%' }}>
                 <FormControlStyled fullWidth variant="outlined" size="small">
                     <InputLabel id="pipeline-select-label">选择 Pipeline</InputLabel>
                     <Select
@@ -171,7 +203,7 @@ const AIGCFunctionalitySidebar = ({
             {selectedPipeline === 'StepFun' && (
                 <>
                     {/* 知识库选择 */}
-                    <Box sx={{ marginBottom: 3 }}>
+                    <Box sx={{ marginBottom: 3 , width: '100%'}}>
                         <FormControlStyled fullWidth variant="outlined" size="small">
                             <InputLabel id="knowledge-base-select-label">选择知识库</InputLabel>
                             <Select
@@ -179,19 +211,22 @@ const AIGCFunctionalitySidebar = ({
                                 value={selectedKB}
                                 onChange={handleKBChange}
                                 label="选择知识库"
-                                disabled={loading} // 禁用选择器在加载时
+                                disabled={kbLoading}
                             >
-                                <MenuItem value="">清除选择</MenuItem> {/* 清除选项 */}
+                                <MenuItem value="">清除选择</MenuItem>
                                 {filteredKnowledgeBases.map((kb) => (
                                     <MenuItem key={kb.id} value={kb.id}>
-                                        {kb.display_name}
+                                        <Tooltip title={kb.description || '无描述'} placement="right" arrow>
+                                            <span>{kb.display_name}</span>
+                                        </Tooltip>
                                     </MenuItem>
                                 ))}
                             </Select>
                         </FormControlStyled>
                     </Box>
+
                     {/* 文件选择框，独立于知识库选择 */}
-                    <Box sx={{ marginBottom: 3 }}>
+                    <Box sx={{ marginBottom: 3 , width: '100%'}}>
                         {filesLoading ? (
                             <CircularProgress size={24} />
                         ) : (
@@ -199,7 +234,7 @@ const AIGCFunctionalitySidebar = ({
                                 <InputLabel id="file-select-label">选择文件</InputLabel>
                                 <Select
                                     labelId="file-select-label"
-                                    multiple // 允许多选
+                                    multiple
                                     value={selectedFiles}
                                     onChange={handleFileChangeLocal}
                                     label="选择文件"
@@ -231,11 +266,11 @@ const AIGCFunctionalitySidebar = ({
                     </Box>
 
                     {/* 是否启用联网搜索 */}
-                    <Box sx={{ marginBottom: 3 }}>
+                    <Box sx={{ marginBottom: 1, width: 200 }}>
                         <FormControlLabel
                             control={
                                 <Switch
-                                    checked={enableWebSearch} // 使用来自父组件的值
+                                    checked={enableWebSearch}
                                     onChange={handleWebSearchToggle}
                                     color="primary"
                                 />
@@ -243,12 +278,13 @@ const AIGCFunctionalitySidebar = ({
                             label="是否启用联网"
                         />
                     </Box>
+
                     {/* 是否启用记忆 */}
-                    <Box sx={{ marginBottom: 3 }}>
+                    <Box sx={{ marginBottom: 1, width: 200 }}>
                         <FormControlLabel
                             control={
                                 <Switch
-                                    checked={enableMemory} // 使用来自父组件的值
+                                    checked={enableMemory}
                                     onChange={handleMemoryToggle}
                                     color="primary"
                                 />
@@ -268,11 +304,12 @@ AIGCFunctionalitySidebar.propTypes = {
     onPipelineChange: PropTypes.func,
     onKnowledgeBaseChange: PropTypes.func,
     onWebSearchChange: PropTypes.func,
-    enableWebSearch: PropTypes.bool, // 保持 PropType
-    setSnackbar: PropTypes.func, // 新增 PropType
+    enableWebSearch: PropTypes.bool,
+    setSnackbar: PropTypes.func,
+    updateSnackbar: PropTypes.func,
     onFileChange: PropTypes.func.isRequired,
-    enableMemory: PropTypes.bool, // 新增 PropType
-    onMemoryChange: PropTypes.func, // 新增 PropType
+    enableMemory: PropTypes.bool,
+    onMemoryChange: PropTypes.func,
 };
 
 export default AIGCFunctionalitySidebar;

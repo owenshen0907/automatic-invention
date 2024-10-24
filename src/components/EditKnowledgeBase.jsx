@@ -19,9 +19,10 @@ const EditKnowledgeBase = ({
                                onClose,
                                knowledgeBase,
                                onUpdateKnowledgeBase,
-                               setSnackbarMessage,
-                               setSnackbarSeverity,
-                               setSnackbarOpen
+                               setSnackbar
+                               // setSnackbarMessage,
+                               // setSnackbarSeverity,
+                               // setSnackbarOpen
                            }) => {
     const [identifier, setIdentifier] = useState('');
     const [displayName, setDisplayName] = useState('');
@@ -55,17 +56,27 @@ const EditKnowledgeBase = ({
 
     const handleSave = async () => {
         if (!displayName.trim()) {
-            setSnackbarMessage('知识库名称不能为空');
-            setSnackbarSeverity('error');
-            setSnackbarOpen(true);
+            // setSnackbarMessage('知识库名称不能为空');
+            // setSnackbarSeverity('error');
+            // setSnackbarOpen(true);
+            setSnackbar({
+                open: true,
+                message: '知识库名称不能为空',
+                severity: 'error',
+            });
             return;
         }
 
         const identifierRegex = /^[a-zA-Z0-9][a-zA-Z0-9_]*$/;
         if (!identifierRegex.test(identifier.trim())) {
-            setSnackbarMessage('知识库标识只能包含字母、数字和下划线，且不能以下划线开头');
-            setSnackbarSeverity('error');
-            setSnackbarOpen(true);
+            // setSnackbarMessage('知识库标识只能包含字母、数字和下划线，且不能以下划线开头');
+            // setSnackbarSeverity('error');
+            // setSnackbarOpen(true);
+            setSnackbar({
+                open: true,
+                message: '知识库标识只能包含字母、数字和下划线，且不能以下划线开头',
+                severity: 'error',
+            });
             return;
         }
 
@@ -88,16 +99,26 @@ const EditKnowledgeBase = ({
                     model_owner: modelOwner, // 保持原有的 model_owner
                 });
                 onClose();
-                setSnackbarMessage('知识库更新成功');
-                setSnackbarSeverity('success');
-                setSnackbarOpen(true);
+                setSnackbar({
+                    open: true,
+                    message: '知识库更新成功',
+                    severity: 'success',
+                });
+                // setSnackbarMessage('知识库更新成功');
+                // setSnackbarSeverity('success');
+                // setSnackbarOpen(true);
             }
         } catch (error) {
             console.error('更新知识库失败:', error);
             const errorMessage = error.response?.data?.details || '更新知识库失败，请重试';
-            setSnackbarMessage(errorMessage);
-            setSnackbarSeverity('error');
-            setSnackbarOpen(true);
+            // setSnackbarMessage(errorMessage);
+            // setSnackbarSeverity('error');
+            // setSnackbarOpen(true);
+            setSnackbar({
+                open: true,
+                message: errorMessage,
+                severity: 'error',
+            });
         } finally {
             setLoading(false);
         }
