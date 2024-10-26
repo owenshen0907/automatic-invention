@@ -50,6 +50,10 @@ const AIGCPage = () => {
     const [selectedConversationId, setSelectedConversationId] = useState('');
     const [saveDialogOpen, setSaveDialogOpen] = useState(false);
     const [newConversationName, setNewConversationName] = useState('');
+
+    // 新增: 性能级别状态
+    const [performanceLevel, setPerformanceLevel] = useState('fast'); // 默认值为 'fast'
+
     // 定义 setSnackbar 函数
     const setSnackbar = (message, severity = 'success') => {
         setSnackbarMessage(message);
@@ -85,6 +89,27 @@ const AIGCPage = () => {
         setEnableWebSearch(isEnabled); // 更新启用联网搜索的状态
         console.log('Enable Web Search:', isEnabled);
     };
+
+    // 处理性能级别变化
+    const handlePerformanceLevelChange = (newLevel) => {
+        setPerformanceLevel(newLevel);
+        // 显示通知或其他逻辑
+        setSnackbar(`性能级别已设置为 "${getPerformanceLabel(newLevel)}"。`, 'info');
+    };
+    // 辅助函数：根据性能级别值获取标签
+    const getPerformanceLabel = (level) => {
+        switch (level) {
+            case 'fast':
+                return '极速';
+            case 'balanced':
+                return '均衡';
+            case 'advanced':
+                return '高级';
+            default:
+                return '';
+        }
+    };
+
     // 辅助函数：将 messages 转换为 StepFunMessage 结构，仅包含文本内容
     const transformMessagesToStepFun = (messages) => {
         return messages.map(msg => {
@@ -142,6 +167,15 @@ const AIGCPage = () => {
 
         setLoading(true);
         setError(null);
+        // 计算输入字数
+        const inputCharacterCount = systemPrompt.trim().length +
+            inputValue.trim().length +
+            transformMessagesToStepFun(messages).reduce((sum, msg) => sum + msg.content.length, 0);
+
+        // Initialize variables to capture model and usage
+        let capturedModel = '';
+        let capturedPromptTokens = 0;
+        let capturedCompletionTokens = 0;
 
         try {
             // 获取选中的知识库详情
@@ -160,6 +194,7 @@ const AIGCPage = () => {
                 file_ids: uploadedFileIds || [], // 将文件 IDs 传递给后端
                 web_search: enableWebSearch,
                 file_type: '', // 初始化 file_type
+                performance_level: performanceLevel, // 添加性能级别
             };
             // 根据 fileType 设置 file_type 字段
             if (fileType === 'image') {
@@ -248,6 +283,14 @@ const AIGCPage = () => {
                         try {
                             const parsed = JSON.parse(jsonString);
                             console.log("Parsed Response: ", parsed);
+                            // Capture model and usage from the response
+                            if (parsed.model) {
+                                capturedModel = parsed.model;
+                            }
+                            if (parsed.usage) {
+                                capturedPromptTokens = parsed.usage.prompt_tokens;
+                                capturedCompletionTokens = parsed.usage.completion_tokens;
+                            }
 
                             // 处理 parsed 对象
                             if (parsed.choices && parsed.choices[0].delta && parsed.choices[0].delta.content) {
@@ -277,8 +320,26 @@ const AIGCPage = () => {
                                         ];
                                     }
                                 });
-                            } else if (parsed.event === 'message_end') {
-                                setLoading(false);
+
+                                // 动态更新最后一条机器人消息的额外字段
+                                setMessages(prevMessages => {
+                                    const lastMessage = prevMessages[prevMessages.length - 1];
+                                    if (lastMessage && lastMessage.sender === 'bot') {
+                                        return prevMessages.map(msg =>
+                                            msg.id === lastMessage.id
+                                                ? {
+                                                    ...msg,
+                                                    model: capturedModel,
+                                                    inputCharacterCount: inputCharacterCount,
+                                                    inputTokenCount: capturedPromptTokens,
+                                                    outputCharacterCount: msg.content ? msg.content.length : 0,
+                                                    outputTokenCount: capturedCompletionTokens,
+                                                }
+                                                : msg
+                                        );
+                                    }
+                                    return prevMessages;
+                                });
                             }
                         } catch (err) {
                             console.error('解析 JSON 失败:', err);
@@ -287,6 +348,7 @@ const AIGCPage = () => {
                     }
                 }
             }
+
 
             setLoading(false);
         } catch (err) {
@@ -321,13 +383,19 @@ const AIGCPage = () => {
         } else {
             setSystemPrompt(''); // 初始化为空，让子组件设置默认值
         }
+        // 加载性能级别
+        const cachedPerformanceLevel = localStorage.getItem('aigcPerformanceLevel');
+        if (cachedPerformanceLevel) {
+            setPerformanceLevel(cachedPerformanceLevel);
+        }
     }, []);
 
-    // 在 messages 和 systemPrompt 状态变化时保存当前对话和系统提示
+    // 在 messages、systemPrompt 和 performanceLevel 状态变化时保存当前对话、系统提示和性能级别
     useEffect(() => {
         localStorage.setItem('aigcCurrentMessages', JSON.stringify(messages));
         localStorage.setItem('aigcSystemPrompt', systemPrompt);
-    }, [messages, systemPrompt]);
+        localStorage.setItem('aigcPerformanceLevel', performanceLevel);
+    }, [messages, systemPrompt,performanceLevel]);
 
     // 在 conversations 状态变化时保存已保存的对话列表
     useEffect(() => {
@@ -477,6 +545,8 @@ const AIGCPage = () => {
                     enableMemory={enableMemory}
                     onMemoryChange={handleMemoryChange}
                     setSnackbar={setSnackbar} // 传递 setSnackbar
+                    performanceLevel={performanceLevel} // 传递性能级别
+                    onPerformanceLevelChange={handlePerformanceLevelChange} // 传递性能级别变化回调
                 />
             </Paper>
             {/* 错误提示 */}

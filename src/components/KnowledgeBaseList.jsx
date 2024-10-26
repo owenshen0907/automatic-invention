@@ -20,7 +20,6 @@ const KnowledgeBaseList = ({
                                knowledgeBases,
                                onSelectKnowledgeBase,
                                onEditKnowledgeBase,
-                               // 如果不需要 selectedKnowledgeBase，可以删除
                            }) => {
     // 状态用于控制上传对话框的显示和记录选中的知识库
     const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
@@ -77,7 +76,7 @@ const KnowledgeBaseList = ({
     };
 
     return (
-        <Box sx={{ flexGrow: 1, p: 1, overflow: 'visible'  }}>
+        <Box sx={{ flexGrow: 1, p: 1, overflow: 'visible' }}>
             {/* UploadFile 组件 */}
             {selectedKBForUpload && (
                 <UploadFile
@@ -108,39 +107,42 @@ const KnowledgeBaseList = ({
             </Snackbar>
 
             {/* KnowledgeBaseList 内容 */}
-            <Box sx={{ display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-                gap: 1, // 控制卡片之间的间距
-                padding: '0 8px',
-                // margintop: 1, // 控制卡片之间的间距
-                overflowX: 'auto', // 当内容超过容器宽度时，启用横向滚动
-                alignItems: 'start', // 确保卡片从顶部对齐
-                }}>
+            <Box
+                sx={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                    gap: 2, // 增加卡片之间的间距
+                    padding: '0 8 px',
+                    overflowX: 'visible', // 允许横向溢出
+                    alignItems: 'start',
+                    gridAutoRows: 'auto', // 使行高自适应内容
+                }}
+            >
                 {paginatedKnowledgeBases.map((kb) => (
                     <Box
                         key={kb.id}
                         sx={{
-                            overflow: 'visible',
+                            overflow: 'visible', // 允许卡片内容溢出
                             position: 'relative',
-                            zIndex: 10,
+                            zIndex: 1, // 基础 zIndex
                         }}
                     >
                         <Card
                             sx={{
                                 display: 'flex',
                                 flexDirection: 'column',
-                                minWidth: '320px', // 设置最小宽度
-                                aspectRatio: '320 / 208', // 设置宽高比
+                                minWidth: '320px',
+                                aspectRatio: '320 / 208', // 保持宽高比
                                 boxShadow: 3,
                                 borderRadius: 2,
-                                transition: 'transform 0.2s, box-shadow 0.2s',
+                                transition: 'transform 0.3s, box-shadow 0.3s',
                                 backgroundColor:
                                     kb.model_owner === 'local' ? '#e0f7fa' : '#fff9ff',
+                                transformOrigin: 'top center', // 从顶部中心放大
                                 '&:hover': {
-                                    transform: 'scale(1.03)', // 放大卡片
-                                    boxShadow: 3, // 增加阴影以增强视觉效果
-                                    zIndex: 100, // 提高 z-index 确保在悬停时在最上层
-                                    position: 'relative',
+                                    transform: 'scale(1.03)', // 适度放大
+                                    boxShadow: 6, // 增加阴影以增强视觉效果
+                                    zIndex: 10, // 提高 z-index 确保在悬停时在最上层
                                 },
                                 margin: 0,
                                 padding: 1,
@@ -199,7 +201,7 @@ const KnowledgeBaseList = ({
                                     p: 1,
                                     backgroundColor: '#ffffff',
                                     borderRadius: '0 0 8px 8px',
-                                    overflow: 'hidden', // 防止内容溢出
+                                    overflow: 'hidden',
                                 }}
                             >
                                 <Typography variant="h6" component="div" gutterBottom>
@@ -246,7 +248,7 @@ const KnowledgeBaseList = ({
 
             {/* 分页控件 */}
             {totalPages > 1 && (
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
                     <Pagination
                         count={totalPages}
                         page={currentPage}

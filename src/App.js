@@ -2,11 +2,13 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { CssBaseline, Snackbar, Alert } from '@mui/material';
+import { ThemeProvider } from '@mui/material/styles'; // 导入 ThemeProvider
 import Layout from './components/Layout';
 import AIGCPage from './pages/AIGCPage';
 import NotePage from './pages/NotePage';
 import KnowledgeCenterPage from './pages/KnowledgeCenterPage';
 import { KnowledgeBaseProvider } from './context/KnowledgeBaseContext';
+import theme from './theme'; // 导入自定义主题
 // import AIGCFunctionalitySidebar from './components/AIGCFunctionalitySidebar';
 
 function App() {
@@ -21,8 +23,10 @@ function App() {
     };
 
     return (
-        <Router>
+        <ThemeProvider theme={theme}> {/* 使用 ThemeProvider 包裹整个应用 */}
             <CssBaseline />
+        <Router>
+
             <KnowledgeBaseProvider>
                 <Layout updateSnackbar={updateSnackbar}> {/* 传递 updateSnackbar */}
                     <Routes>
@@ -45,6 +49,7 @@ function App() {
                 </Snackbar>
             </KnowledgeBaseProvider>
         </Router>
+</ThemeProvider>
     );
 }
 

@@ -16,8 +16,12 @@ import {
     MenuItem,
     FormControl,
     InputLabel,
-    TablePagination
+    TablePagination,
+    AppBar,
+    Toolbar,
+    IconButton,
 } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'; // 导入返回图标
 import axios from 'axios';
 import useKnowledgeBaseFiles from '../hooks/useKnowledgeBaseFiles';
 
@@ -124,29 +128,29 @@ const KnowledgeBaseManagement = ({
     const paginatedFiles = files.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
     return (
-        <Box sx={{ p: 2 }}>
-            {/* 将标题和按钮放在同一个容器中，并设置为 flex 布局 */}
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                <Typography variant="h5">
-                    文件列表 - {selectedKnowledgeBase.display_name}
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                    <Button variant="contained" color="primary" onClick={onBack}>
-                        返回列表
-                    </Button>
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {/* AppBar 作为顶部导航栏 */}
+            <AppBar position="static" color="default" elevation={1}>
+                <Toolbar>
+                    <IconButton edge="start" color="inherit" onClick={onBack} aria-label="back">
+                        <ArrowBackIcon />
+                    </IconButton>
+                    <Typography variant="h6" sx={{ flexGrow: 1 }}>
+                        文件管理 - {selectedKnowledgeBase.display_name}
+                    </Typography>
                     <Button variant="outlined" color="secondary" onClick={refreshFiles}>
                         刷新文件列表
                     </Button>
-                </Box>
-            </Box>
+                </Toolbar>
+            </AppBar>
 
             {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}>
                     <CircularProgress />
                 </Box>
             ) : (
                 <>
-                <TableContainer component={Paper} sx={{ mt: 2 }}>
+                <TableContainer component={Paper} sx={{ mt: 2 ,flexGrow: 1}}>
                     <Table>
                         <TableHead>
                             <TableRow>

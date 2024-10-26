@@ -8,6 +8,7 @@ import {
     Alert,
     Button,
     CircularProgress,
+    Slide,
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import KnowledgeBaseList from '../components/KnowledgeBaseList';
@@ -90,10 +91,12 @@ const KnowledgeCenterPage = () => {
                 padding: 0,
                 backgroundColor: '#f0f2f5',
                 justifyContent: 'center', // 居中对齐内容
+                position: 'relative', // 使子组件可以绝对定位
+                boxSizing: 'border-box',
             }}
         >
             {/* 知识库主内容区域 */}
-            <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column',top:0 }}>
+            <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <Paper
                     elevation={1}
                     sx={{
@@ -105,6 +108,8 @@ const KnowledgeCenterPage = () => {
                         display: 'flex',
                         flexDirection: 'column',
                         height: '100%',
+                        position: 'relative',
+                        overflow: 'hidden', // 防止内部内容溢出
                     }}
                 >
                     {/* 知识中心：Header Section */}
@@ -149,16 +154,18 @@ const KnowledgeCenterPage = () => {
                             flexGrow: 1,
                             flexDirection: 'column',
                             gap: 1,
-                            // overflow: 'hidden',
+                            overflow: 'hidden',
                             p: 0, // 为内容区域添加统一的内边距
+                            overflow: 'hidden', // 防止子组件溢出
                         }}
                     >
                         {/* KnowledgeBaseList 部分 */}
                         <Box
                             sx={{
-                                flex: selectedKnowledgeBase ? '0 0 30%' : '1',
+                                flex: '1',
                                 overflowY: 'auto',
                                 transition: 'flex 0.3s ease',
+                                paddingRight: 1, // 为滚动条留出空间
                             }}
                         >
                             {loading ? (
@@ -175,24 +182,9 @@ const KnowledgeCenterPage = () => {
                                 />
                             )}
                         </Box>
-
-                        {/* KnowledgeBaseManagement 部分 */}
-                        {selectedKnowledgeBase && (
-                            <Box
-                                sx={{
-                                    flex: '0 0 70%',
-                                    overflowY: 'auto',
-                                    borderTop: '1px solid #ddd',
-                                }}
-                            >
-                                <KnowledgeBaseManagement
-                                    selectedKnowledgeBase={selectedKnowledgeBase}
-                                    onBack={handleBackToList}
-                                    setSnackbar={setSnackbar}
-                                />
-                            </Box>
-                        )}
                     </Box>
+
+
 
                     {/* 创建知识库对话框 */}
                     <CreateKnowledgeBase
@@ -223,6 +215,37 @@ const KnowledgeCenterPage = () => {
                     </Snackbar>
                 </Paper>
             </Box>
+
+            {/* KnowledgeBaseManagement 作为覆盖层，通过 Slide 动画控制显示 */}
+            <Slide
+                direction="up"
+                in={Boolean(selectedKnowledgeBase)}
+                mountOnEnter
+                unmountOnExit
+                timeout={300} // 过渡时间，可根据需要调整
+            >
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%', // 覆盖父容器的全部高度
+                        backgroundColor: '#ffffff',
+                        zIndex: 1300, // 确保覆盖层在所有其他内容之上
+                        boxShadow: 4,
+                        overflowY: 'auto',
+                    }}
+                >
+                    {selectedKnowledgeBase && (
+                        <KnowledgeBaseManagement
+                            selectedKnowledgeBase={selectedKnowledgeBase}
+                            onBack={handleBackToList}
+                            setSnackbar={setSnackbar}
+                        />
+                    )}
+                </Box>
+            </Slide>
         </Box>
     );
 };

@@ -15,13 +15,13 @@ const Header = () => {
         >
             <Toolbar sx={{ height: '100%' }}>
                 <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                    OpenAPI Web
+                    Owen's Cat
                 </Typography>
                 <Box>
-                    <Button color="inherit">控制台</Button>
-                    <Button color="inherit">跃文</Button>
+                    <Button color="inherit">Home</Button>
+                    <Button color="inherit">YueWen</Button>
                     <Button color="inherit">ChatGPT</Button>
-                    <Button color="inherit">用户信息</Button>
+                    <Button color="inherit">UserInfo</Button>
                 </Box>
             </Toolbar>
         </AppBar>

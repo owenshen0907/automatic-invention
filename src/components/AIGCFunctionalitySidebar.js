@@ -14,6 +14,8 @@ import {
     Chip,
     Tooltip,
     IconButton,
+    ToggleButton,
+    ToggleButtonGroup,
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { styled } from '@mui/system';
@@ -44,6 +46,40 @@ const FormControlStyled = styled(FormControl)(({ theme }) => ({
     margin: '0 auto', // 水平居中
 }));
 
+
+const PerformanceToggleGroup = styled(ToggleButtonGroup)(({ theme }) => ({
+    marginBottom: theme.spacing(3),
+    width: '100%',
+    display: 'flex',
+    justifyContent: 'space-between',
+}));
+
+const PerformanceToggleButton = styled(ToggleButton)(({ theme }) => ({
+    flex: 1,
+    margin: theme.spacing(0, 0.5),
+    border: '1px solid',
+    borderColor: theme.palette.grey[400],
+    borderRadius: theme.shape.borderRadius,
+    textTransform: 'none',
+    padding: theme.spacing(1),
+    minWidth: 0,
+    '&.Mui-selected': {
+        backgroundColor: theme.palette.success.main,
+        color: theme.palette.common.white,
+        borderColor: theme.palette.success.main,
+        '&:hover': {
+            backgroundColor: theme.palette.success.dark,
+        },
+    },
+    '&:not(.Mui-selected)': {
+        backgroundColor: theme.palette.grey[300],
+        color: theme.palette.text.primary,
+        '&:hover': {
+            backgroundColor: theme.palette.grey[400],
+        },
+    },
+}));
+
 const AIGCFunctionalitySidebar = ({
                                       selectedPipeline = '',
                                       onPipelineChange = () => {},
@@ -55,12 +91,20 @@ const AIGCFunctionalitySidebar = ({
                                       updateSnackbar = () => {},
                                       enableMemory = true,
                                       onMemoryChange = () => {},
+                                      performanceLevel, // 接收 performanceLevel 作为 prop
+                                      onPerformanceLevelChange, // 接收回调
                                   }) => {
     const { knowledgeBases, loading: kbLoading, refreshKnowledgeBases } = useContext(KnowledgeBaseContext);
     const [selectedKB, setSelectedKB] = useState('');
     const [pipelineOptions, setPipelineOptions] = useState([]);
     const [selectedFiles, setSelectedFiles] = useState([]);
     const { files, loading: filesLoading, fetchFiles } = useKnowledgeBaseFiles('local20241015145535', true, setSnackbar);
+
+    const handlePerformanceLevelChangeLocal = (event, newLevel) => {
+        if (newLevel !== null) {
+            onPerformanceLevelChange(newLevel);
+        }
+    };
 
     useEffect(() => {
         const pipelineOptionsFromEnv = process.env.REACT_APP_PIPELINE_OPTIONS;
@@ -202,6 +246,7 @@ const AIGCFunctionalitySidebar = ({
             {/* 条件渲染：仅当 Pipeline 为 'StepFun' 时显示 */}
             {selectedPipeline === 'StepFun' && (
                 <>
+
                     {/* 知识库选择 */}
                     <Box sx={{ marginBottom: 3 , width: '100%'}}>
                         <FormControlStyled fullWidth variant="outlined" size="small">
@@ -264,6 +309,31 @@ const AIGCFunctionalitySidebar = ({
                             </FormControlStyled>
                         )}
                     </Box>
+                    {/* 性能级别滑块 */}
+                    <Box sx={{ marginBottom: 1, width: '240' }}>
+                        <PerformanceToggleGroup
+                            value={performanceLevel}
+                            exclusive
+                            onChange={handlePerformanceLevelChangeLocal}
+                            aria-label="性能级别"
+                        >
+                            <Tooltip title="速度优先，适用娱乐聊天对话。" placement="top" arrow>
+                                <PerformanceToggleButton value="fast">
+                                    极速
+                                </PerformanceToggleButton>
+                            </Tooltip>
+                            <Tooltip title="千亿参数，适用大多数场景" placement="top" arrow>
+                                <PerformanceToggleButton value="balanced">
+                                    均衡
+                                </PerformanceToggleButton>
+                            </Tooltip>
+                            <Tooltip title="万亿参数，适合严密的逻辑推理，复杂的任务" placement="top" arrow>
+                                <PerformanceToggleButton value="advanced">
+                                    高级
+                                </PerformanceToggleButton>
+                            </Tooltip>
+                        </PerformanceToggleGroup>
+                    </Box>
 
                     {/* 是否启用联网搜索 */}
                     <Box sx={{ marginBottom: 1, width: 200 }}>
@@ -310,6 +380,8 @@ AIGCFunctionalitySidebar.propTypes = {
     onFileChange: PropTypes.func.isRequired,
     enableMemory: PropTypes.bool,
     onMemoryChange: PropTypes.func,
+    performanceLevel: PropTypes.oneOf(['fast', 'balanced', 'advanced']), // 新增
+    onPerformanceLevelChange: PropTypes.func.isRequired, // 新增
 };
 
 export default AIGCFunctionalitySidebar;
