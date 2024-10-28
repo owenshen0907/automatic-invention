@@ -54,7 +54,9 @@ const useKnowledgeBases = () => {
             }
 
             const apiUrl = process.env.REACT_APP_API_BASE_URL;
-            const response = await axios.get(`${apiUrl}/api/get-data?type=knowledge_bases`);
+            const response = await axios.get(`${apiUrl}/api/get-data?type=knowledge_bases`,{
+                withCredentials: true,
+            });
             console.log('知识库数据:', response.data);
             if (response.status === 200) {
                 const data = response.data.map(kb => ({

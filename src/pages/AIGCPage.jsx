@@ -233,6 +233,7 @@ const AIGCPage = () => {
                 headers: {
                     'Content-Type': 'application/json'
                 },
+                credentials: 'include', // 新增：携带凭证（Cookie）
                 body: JSON.stringify(data)
             });
 

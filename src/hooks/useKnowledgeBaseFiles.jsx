@@ -48,7 +48,7 @@ const useKnowledgeBaseFiles = (knowledgeBaseID, isLocalModel, setSnackbar) => {
             }
 
             const apiUrl = process.env.REACT_APP_API_BASE_URL;
-            const response = await axios.get(`${apiUrl}/api/knowledge-bases/${knowledgeBaseID}/files`);
+            const response = await axios.get(`${apiUrl}/api/knowledge-bases/${knowledgeBaseID}/files`,{withCredentials: true,});
             if (response.status === 200) {
                 const data = response.data || [];
                 setFiles(data);
