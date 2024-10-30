@@ -10,6 +10,7 @@ const useKnowledgeBases = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
+
     // 获取缓存数据
     const getCachedData = () => {
         const cached = localStorage.getItem(CACHE_KEY);
@@ -31,7 +32,6 @@ const useKnowledgeBases = () => {
             return null;
         }
     };
-
     // 设置缓存数据
     const setCachedData = (data) => {
         const payload = {

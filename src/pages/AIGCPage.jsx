@@ -54,6 +54,8 @@ const AIGCPage = () => {
     // 新增: 性能级别状态
     const [performanceLevel, setPerformanceLevel] = useState('fast'); // 默认值为 'fast'
 
+    // 新增：添加 username 状态
+    const [username, setUsername] = useState('未知'); // 默认用户名
     // 定义 setSnackbar 函数
     const setSnackbar = (message, severity = 'success') => {
         setSnackbarMessage(message);
@@ -132,7 +134,15 @@ const AIGCPage = () => {
             }
         }).filter(msg => msg.content); // 过滤掉内容为空的消息
     };
-
+    // 新增：从缓存中获取用户名
+    useEffect(() => {
+        const cachedUsername = localStorage.getItem('username');
+        if (cachedUsername) {
+            setUsername(cachedUsername);
+        } else {
+            setUsername('未知'); // 如果缓存中没有，则设置为默认值
+        }
+    }, []);
     // 发送消息的处理函数
     const handleSend = async (inputValue, uploadedFileIds,fileType,selectedFiles) => {
         if (inputValue.trim() === '' && uploadedFileIds.length === 0) {
@@ -181,6 +191,7 @@ const AIGCPage = () => {
             // 获取选中的知识库详情
             const selectedKnowledgeBase = knowledgeBases.find(kb => kb.id === selectedKB);
             const systemPromptContent = systemPrompt.trim(); // 直接使用系统提示内容，可以为空
+
             // 构建调用 API 的请求数据
             const data = {
                 inputs: {},
@@ -188,7 +199,7 @@ const AIGCPage = () => {
                 query: inputValue,
                 response_mode: "streaming",
                 conversation_id: "",
-                user: "abc-123",
+                user: username,
                 vector_store_id: selectedKB, // 添加 vector_store_id
                 vector_file_ids: selectedVectorFileIds,
                 file_ids: uploadedFileIds || [], // 将文件 IDs 传递给后端
