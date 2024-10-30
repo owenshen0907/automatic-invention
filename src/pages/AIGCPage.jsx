@@ -22,7 +22,7 @@ import {
     IconButton,
 } from '@mui/material';
 import { Save as SaveIcon, Clear as ClearIcon, KeyboardArrowUp as KeyboardArrowUpIcon} from '@mui/icons-material';
-import { v4 as uuidv4 } from 'uuid'; // 安装 uuid 库用于生成唯一 ID
+import { nanoid } from 'nanoid'; // 使用 nanoid 生成唯一 ID
 import AIGCContentArea from '../components/AIGCContentArea';
 import AIGCInputArea from '../components/AIGCInputArea';
 import AIGCFunctionalitySidebar from '../components/AIGCFunctionalitySidebar';
@@ -152,7 +152,7 @@ const AIGCPage = () => {
 
         // 创建包含 files 数组的用户消息对象
         const userMessage = {
-            id: uuidv4(),
+            id: nanoid(),
             sender: 'user',
             type: 'text',
             content: inputValue.trim() !== '' ? inputValue : null,
@@ -313,7 +313,7 @@ const AIGCPage = () => {
                                         return [
                                             ...prevMessages,
                                             {
-                                                id: uuidv4(), // 唯一标识
+                                                id: nanoid(),
                                                 sender: 'bot',
                                                 content: content,
                                                 createdAt: new Date().toLocaleTimeString(),
@@ -422,7 +422,7 @@ const AIGCPage = () => {
 
         // 创建新的对话对象
         const newConversation = {
-            id: uuidv4(),
+            id: nanoid(),
             name: newConversationName.trim(),
             messages: messages,
             timestamp: new Date().toISOString(),
