@@ -10,6 +10,9 @@ COPY package.json pnpm-lock.yaml ./
 # 安装 pnpm
 RUN npm install -g pnpm
 
+# 设置 pnpm 使用国内源
+RUN pnpm config set registry https://registry.npmmirror.com
+
 # 安装依赖
 RUN pnpm install
 
