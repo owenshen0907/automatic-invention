@@ -1,4 +1,4 @@
-# 使用 node 镜像来构建应用
+# 使用 Node.js 镜像来构建应用
 FROM node:20.18-alpine AS build
 
 # 设置工作目录
@@ -22,17 +22,20 @@ COPY . .
 # 构建 React 应用
 RUN pnpm run build
 
-# 使用 Nginx 提供静态文件服务
-FROM nginx:alpine
+# 使用 Node.js 提供静态文件服务
+FROM node:20.18-alpine
 
-# 移除默认的 Nginx 索引文件
-RUN rm -rf /usr/share/nginx/html/*
+# 设置工作目录
+WORKDIR /app
 
-# 从构建阶段复制构建产物到 Nginx 目录
-COPY --from=build /app/build /usr/share/nginx/html
+# 安装 serve 包用于提供静态文件服务
+RUN npm install -g serve
+
+# 从构建阶段复制构建产物到当前工作目录
+COPY --from=build /app/build ./build
 
 # 暴露端口
 EXPOSE 3000
 
-# 启动 Nginx
-CMD ["nginx", "-g", "daemon off;"]
+# 启动 serve 来提供静态文件
+CMD ["serve", "-s", "build", "-l", "3000"]
