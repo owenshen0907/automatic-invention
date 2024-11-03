@@ -17,6 +17,7 @@ const useUploadFile = ({
     const [loading, setLoading] = useState(false);
     const [uploadProgresses, setUploadProgresses] = useState([]);
     const [fileIds, setFileIds] = useState([]); // 新增状态变量
+    const [fileWebPaths, setFileWebPaths] = useState([]); // 新增：存储 file_web_path
 
     const handleFileChange = (event) => {
         const files = Array.from(event.target.files);
@@ -65,6 +66,7 @@ const useUploadFile = ({
                     apiUrl,
                     formData,
                     {
+                        withCredentials: true,
                         headers: {
                             'Content-Type': 'multipart/form-data',
                         },
@@ -86,13 +88,21 @@ const useUploadFile = ({
                     newFileIds[i] = response.data.file_id;
                     return newFileIds;
                 });
+                setFileWebPaths((prevPaths) => {
+                    const newPaths = [...prevPaths];
+                    newPaths[i] = response.data.file_web_path; // 假设后端返回 file_web_path
+                    return newPaths;
+                });
 
                 setSnackbarMessage(`文件上传成功: ${response.data.file_id}`);
                 setSnackbarSeverity('success');
                 setSnackbarOpen(true);
 
                 if (onFileUploaded) {
-                    onFileUploaded(response.data.file_id);
+                    onFileUploaded({
+                        file_id: response.data.file_id,
+                        file_web_path: response.data.file_web_path, // 传递 file_web_path
+                    });
                 }
             } catch (error) {
                 let errorMessage = '文件上传失败';
@@ -157,6 +167,7 @@ const useUploadFile = ({
         uploadProgresses,
         handleClose,
         fileIds, // 如果需要，返回 fileIds
+        fileWebPaths, // 返回 file_web_path
     };
 };
 

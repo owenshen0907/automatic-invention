@@ -1,5 +1,5 @@
 // src/components/AIGCInputArea.js
-import React, { useState,useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     Box,
     TextField,
@@ -26,21 +26,19 @@ const SUPPORTED_FILE_FORMATS = [
     '.ppt', '.pptx',
     '.csv',
     '.html', '.htm', '.xml',
+    '.mp4'
 ];
 
 const AIGCInputArea = ({ onSend }) => {
     const [inputValue, setInputValue] = useState('');
     const [selectedFiles, setSelectedFiles] = useState([]);
-    const [fileType, setFileType] = useState(null); // 'image' or 'file'
+    const [fileType, setFileType] = useState(null); // 'image' | 'file' | 'video'
 
     const [anchorEl, setAnchorEl] = useState(null);
     const open = Boolean(anchorEl);
 
-    // 新增状态用于收集上传后的文件ID
-    const [uploadedFileIds, setUploadedFileIds] = useState([]);
-
-    // 新增状态用于跟踪每个文件的上传状态
-    const [fileStatuses, setFileStatuses] = useState([]); // 'uploading' | 'uploaded'
+    // 新增状态用于收集上传后的文件详情
+    const [uploadedFileDetails, setUploadedFileDetails] = useState([]);
 
     // 添加 Snackbar 状态
     const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -65,19 +63,9 @@ const AIGCInputArea = ({ onSend }) => {
         setSnackbarMessage,
         setSnackbarSeverity,
         setSnackbarOpen,
-        onFileUploaded: (fileId) => {
-            // 收集上传后的文件ID
-            setUploadedFileIds((prev) => [...prev, fileId]);
-
-            // 更新对应文件的上传状态为 'uploaded'
-            setFileStatuses((prevStatuses) => {
-                const newStatuses = [...prevStatuses];
-                const index = newStatuses.findIndex(status => status === 'uploading');
-                if (index !== -1) {
-                    newStatuses[index] = 'uploaded';
-                }
-                return newStatuses;
-            });
+        onFileUploaded: (file) => {
+            // 收集上传后的文件详情，包括 file_id 和 file_web_path
+            setUploadedFileDetails((prev) => [...prev, file]);
         },
         onClose: () => {
             // 上传完成后的回调，可以根据需要进行处理
@@ -85,17 +73,17 @@ const AIGCInputArea = ({ onSend }) => {
     });
 
     const handleSendClick = () => {
-        if (inputValue.trim() === '' && uploadedFileIds.length === 0) {
+        if (inputValue.trim() === '' && uploadedFileDetails.length === 0) {
             setSnackbarMessage('请输入内容或选择要上传的文件。');
             setSnackbarSeverity('warning');
             setSnackbarOpen(true);
             return;
         }
-        onSend(inputValue, uploadedFileIds,fileType,selectedFiles);
+        onSend(inputValue, uploadedFileDetails, fileType, selectedFiles);
         setInputValue('');
         setSelectedFiles([]);
         setFileType(null);
-        setUploadedFileIds([]);
+        setUploadedFileDetails([]);
     };
 
     const handleMenuOpen = (event) => {
@@ -145,9 +133,6 @@ const AIGCInputArea = ({ onSend }) => {
         setFileNames(processedFiles.map((file) => file.name));
         setFileDescriptions(processedFiles.map(() => ''));
 
-        // 初始化 fileStatuses 为 'uploading' for each file
-        setFileStatuses(processedFiles.map(() => 'uploading'));
-
         await handleUploadFiles(processedFiles); // 不传递参数，使用 selectedFiles
     };
 
@@ -179,10 +164,44 @@ const AIGCInputArea = ({ onSend }) => {
         setFileNames(files.map((file) => file.name));
         setFileDescriptions(files.map(() => ''));
 
-        // 初始化 fileStatuses 为 'uploading' for each file
-        setFileStatuses(files.map(() => 'uploading'));
-
         await handleUploadFiles(files); // 不传递参数，使用 selectedFiles
+    };
+
+    // 新增 handleUploadVideo 方法
+    const handleUploadVideo = async (event) => {
+        const files = Array.from(event.target.files);
+        if (files.length > 1) {
+            setSnackbarMessage('一次最多上传1个视频。');
+            setSnackbarSeverity('warning');
+            setSnackbarOpen(true);
+            return;
+        }
+
+        const file = files[0];
+        if (file.size > 128 * 1024 * 1024) { // 128MB
+            setSnackbarMessage(`文件 "${file.name}" 超过128MB限制。`);
+            setSnackbarSeverity('warning');
+            setSnackbarOpen(true);
+            return;
+        }
+
+        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+        if (fileExtension !== '.mp4') {
+            setSnackbarMessage(`文件格式不支持: ${file.name}`);
+            setSnackbarSeverity('warning');
+            setSnackbarOpen(true);
+            return;
+        }
+
+        setSelectedFiles([file]);
+        setFileType('video');
+        handleMenuClose();
+
+        setUploadSelectedFiles([file]);
+        setFileNames([file.name]);
+        setFileDescriptions(['']);
+
+        await handleUploadFiles([file]); // 使用钩子上传视频
     };
 
     const handleKeyDown = (event) => {
@@ -201,15 +220,13 @@ const AIGCInputArea = ({ onSend }) => {
         setUploadSelectedFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
         setFileNames(prevNames => prevNames.filter((_, i) => i !== index));
         setFileDescriptions(prevDescs => prevDescs.filter((_, i) => i !== index));
-        // 从 uploadedFileIds 中移除对应的文件ID
-        setUploadedFileIds(prevIds => prevIds.filter((_, i) => i !== index));
-        // 从 fileStatuses 中移除对应的状态
-        setFileStatuses(prevStatuses => prevStatuses.filter((_, i) => i !== index));
+        // 从 uploadedFileDetails 中移除对应的文件详情
+        setUploadedFileDetails(prevDetails => prevDetails.filter((_, i) => i !== index));
     };
 
     const renderFilePreview = (file, index) => {
         const isImage = file.type.startsWith('image/');
-        const status = fileStatuses[index]; // 'uploading' | 'uploaded'
+        const status = 'uploaded'; // 假设文件已上传成功
         return (
             <Box
                 key={index}
@@ -392,12 +409,14 @@ const AIGCInputArea = ({ onSend }) => {
                                         CSV（.csv）
                                         <br />
                                         HTML/XML（.html, .htm, .xml）
+                                        <br />
+                                        视频（.mp4）
                                     </Typography>
                                     <Typography variant="body2">
-                                        最多一次上传10个文件
+                                        最多一次上传10个文件（图片除外，视频最多1个）
                                     </Typography>
                                     <Typography variant="body2">
-                                        单文件大小限制为64MB
+                                        单文件大小限制为64MB（图片单文件20MB，视频128MB）
                                     </Typography>
                                 </Box>
                             }
@@ -417,6 +436,43 @@ const AIGCInputArea = ({ onSend }) => {
                                         hidden
                                         onChange={handleUploadFile}
                                         accept={SUPPORTED_FILE_FORMATS.join(',')}
+                                    />
+                                </label>
+                            </MenuItem>
+                        </Tooltip>
+                    )}
+                    {/* 新增上传视频的选项 */}
+                    {fileType !== 'video' && (
+                        <Tooltip
+                            title={
+                                <Box>
+                                    <Typography variant="body2">
+                                        支持格式：MP4
+                                    </Typography>
+                                    <Typography variant="body2">
+                                        最多一次上传1个视频
+                                    </Typography>
+                                    <Typography variant="body2">
+                                        视频大小限制为128MB
+                                    </Typography>
+                                </Box>
+                            }
+                            placement="right"
+                            arrow
+                        >
+                            <MenuItem>
+                                <label
+                                    htmlFor="upload-video"
+                                    style={{ cursor: 'pointer', width: '100%', display: 'block' }}
+                                >
+                                    上传视频
+                                    <input
+                                        id="upload-video"
+                                        type="file"
+                                        accept="video/mp4"
+                                        multiple={false} // 一次上传一个视频
+                                        hidden
+                                        onChange={handleUploadVideo}
                                     />
                                 </label>
                             </MenuItem>

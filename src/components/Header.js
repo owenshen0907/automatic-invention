@@ -78,7 +78,14 @@ const Header = () => {
         Cookies.remove('jwtToken'); // 清除 token
         localStorage.removeItem(USERNAME_KEY); // 清除缓存中的用户名
         handleMenuClose(); // 关闭菜单
-        navigate('/login'); // 假设 '/login' 是您的登录页面路由
+        // Redirect to login page using the URL from .env
+        const loginPage = process.env.REACT_APP_LOGIN_PAGE;
+        if (loginPage) {
+            window.location.href = loginPage;
+        } else {
+            console.error('REACT_APP_LOGIN_PAGE is not defined in .env');
+            navigate('/login'); // Fallback to internal route if env variable is missing
+        }
     };
 
     return (

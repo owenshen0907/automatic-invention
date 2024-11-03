@@ -21,7 +21,7 @@ import {
     Typography,
     IconButton,
 } from '@mui/material';
-import { Save as SaveIcon, Clear as ClearIcon, KeyboardArrowUp as KeyboardArrowUpIcon} from '@mui/icons-material';
+import { Save as SaveIcon, Clear as ClearIcon, KeyboardArrowUp as KeyboardArrowUpIcon } from '@mui/icons-material';
 import { nanoid } from 'nanoid'; // 使用 nanoid 生成唯一 ID
 import AIGCContentArea from '../components/AIGCContentArea';
 import AIGCInputArea from '../components/AIGCInputArea';
@@ -56,6 +56,10 @@ const AIGCPage = () => {
 
     // 新增：添加 username 状态
     const [username, setUsername] = useState('未知'); // 默认用户名
+
+    // 新增：存储上传文件的详细信息
+    const [uploadedFileDetails, setUploadedFileDetails] = useState([]);
+
     // 定义 setSnackbar 函数
     const setSnackbar = (message, severity = 'success') => {
         setSnackbarMessage(message);
@@ -144,8 +148,9 @@ const AIGCPage = () => {
         }
     }, []);
     // 发送消息的处理函数
-    const handleSend = async (inputValue, uploadedFileIds,fileType,selectedFiles) => {
-        if (inputValue.trim() === '' && uploadedFileIds.length === 0) {
+
+    const handleSend = async (inputValue, uploadedFileDetails, fileType, selectedFiles) => {
+        if (inputValue.trim() === '' && uploadedFileDetails.length === 0) {
             // 添加提示用户输入内容或选择文件
             setSnackbarMessage('请输入内容或选择文件后再发送。');
             setSnackbarSeverity('warning');
@@ -153,20 +158,25 @@ const AIGCPage = () => {
             return;
         }
 
+        // // 创建包含必要信息的 files 数组
+        // const files = selectedFiles.map(file => ({
+        //     url: URL.createObjectURL(file), // 或者使用实际上传后的文件 URL
+        //     name: file.name,
+        //     type: file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'file',
+        // }));
         // 创建包含必要信息的 files 数组
         const files = selectedFiles.map(file => ({
-            url: URL.createObjectURL(file), // 或者使用实际上传后的文件 URL
+            url: file.file_web_path, // 使用上传后的文件 URL
             name: file.name,
-            type: file.type.startsWith('image/') ? 'image' : 'file',
+            type: file.type, // 包含文件类型
         }));
-
         // 创建包含 files 数组的用户消息对象
         const userMessage = {
             id: nanoid(),
             sender: 'user',
             type: 'text',
             content: inputValue.trim() !== '' ? inputValue : null,
-            fileIds: uploadedFileIds || [],
+            fileIds: uploadedFileDetails.map(file => file.file_id) || [],
             files, // 包含 files 数组
             createdAt: new Date().toLocaleTimeString(),
         };
@@ -174,9 +184,9 @@ const AIGCPage = () => {
         // 将用户消息添加到消息数组
         setMessages(prevMessages => [...prevMessages, userMessage]);
 
-
         setLoading(true);
         setError(null);
+
         // 计算输入字数
         const inputCharacterCount = systemPrompt.trim().length +
             inputValue.trim().length +
@@ -192,6 +202,43 @@ const AIGCPage = () => {
             const selectedKnowledgeBase = knowledgeBases.find(kb => kb.id === selectedKB);
             const systemPromptContent = systemPrompt.trim(); // 直接使用系统提示内容，可以为空
 
+            // 构建 user_prompt 数组
+            const userPrompt = [];
+
+            if (inputValue.trim() !== '') {
+                userPrompt.push({
+                    type: 'text',
+                    text: inputValue.trim(),
+                });
+            }
+            // 根据每个文件的类型添加相应的内容
+            uploadedFileDetails.forEach(file => {
+                if (file.type === 'image') {
+                    userPrompt.push({
+                        type: 'image_url',
+                        image_url: {
+                            url: file.file_web_path,
+                            detail: 'high',
+                        },
+                    });
+                } else if (file.type === 'video') {
+                    userPrompt.push({
+                        type: 'video_url',
+                        video_url: {
+                            url: file.file_web_path,
+                        },
+                    });
+                } else {
+                    userPrompt.push({
+                        type: 'file_url',
+                        file_url: {
+                            url: file.file_web_path,
+                        },
+                    });
+                }
+            });
+
+
             // 构建调用 API 的请求数据
             const data = {
                 inputs: {},
@@ -202,15 +249,22 @@ const AIGCPage = () => {
                 user: username,
                 vector_store_id: selectedKB, // 添加 vector_store_id
                 vector_file_ids: selectedVectorFileIds,
-                file_ids: uploadedFileIds || [], // 将文件 IDs 传递给后端
+                file_ids: uploadedFileDetails.map(file => file.file_id) || [], // 将文件 IDs 传递给后端
                 web_search: enableWebSearch,
                 file_type: '', // 初始化 file_type
                 performance_level: performanceLevel, // 添加性能级别
+                user_prompt: {
+                    role: 'user',
+                    content: userPrompt,
+                },
             };
+
             // 根据 fileType 设置 file_type 字段
             if (fileType === 'image') {
                 data.file_type = 'img';
-            } else if (fileType === 'file') {
+            } else if (fileType === 'video') {
+                data.file_type = 'video';
+            } else {
                 data.file_type = 'file';
             }
 
@@ -220,10 +274,12 @@ const AIGCPage = () => {
                 if (name) data.name = name;
                 if (description) data.description = description;
             }
+
             // 如果启用了记忆功能，则添加对话历史，仅包含文本内容
             if (enableMemory) {
                 data.conversation_history = transformMessagesToStepFun(messages);
             }
+
             console.log('发送数据:', data);
 
             // 根据选择的 Pipeline 选择不同的 API 接口
@@ -361,7 +417,6 @@ const AIGCPage = () => {
                 }
             }
 
-
             setLoading(false);
         } catch (err) {
             console.error(err);
@@ -400,6 +455,11 @@ const AIGCPage = () => {
         if (cachedPerformanceLevel) {
             setPerformanceLevel(cachedPerformanceLevel);
         }
+        // 加载上传文件详情
+        const cachedUploadedFiles = localStorage.getItem('aigcUploadedFileDetails');
+        if (cachedUploadedFiles) {
+            setUploadedFileDetails(JSON.parse(cachedUploadedFiles));
+        }
     }, []);
 
     // 在 messages、systemPrompt 和 performanceLevel 状态变化时保存当前对话、系统提示和性能级别
@@ -407,7 +467,8 @@ const AIGCPage = () => {
         localStorage.setItem('aigcCurrentMessages', JSON.stringify(messages));
         localStorage.setItem('aigcSystemPrompt', systemPrompt);
         localStorage.setItem('aigcPerformanceLevel', performanceLevel);
-    }, [messages, systemPrompt,performanceLevel]);
+        localStorage.setItem('aigcUploadedFileDetails', JSON.stringify(uploadedFileDetails)); // 保存上传文件详情
+    }, [messages, systemPrompt, performanceLevel, uploadedFileDetails]);
 
     // 在 conversations 状态变化时保存已保存的对话列表
     useEffect(() => {
@@ -454,6 +515,14 @@ const AIGCPage = () => {
         const selectedConversation = conversations.find(conv => conv.id === conversationId);
         if (selectedConversation) {
             setMessages(selectedConversation.messages);
+            setUploadedFileDetails(selectedConversation.messages
+                .filter(msg => msg.sender === 'user' && msg.files)
+                .flatMap(msg => msg.files.map(file => ({
+                    file_id: file.fileIds,
+                    file_web_path: file.url,
+                    type: file.type,
+                })))
+            );
             setSnackbar(`已加载对话：“${selectedConversation.name}”。`, 'success');
         } else {
             setSnackbar('未找到选定的对话。', 'error');
@@ -464,12 +533,14 @@ const AIGCPage = () => {
     // 新增：清空当前对话函数
     const handleClearChat = () => {
         setMessages([]);
+        setUploadedFileDetails([]);
         localStorage.removeItem('aigcCurrentMessages');
+        localStorage.removeItem('aigcUploadedFileDetails');
         setSnackbar('当前对话已清空。', 'info');
     };
 
     return (
-        <Box sx={{ display: 'flex', flexGrow: 1, height: '100vh', overflow: 'hidden',position: 'relative' }}>
+        <Box sx={{ display: 'flex', flexGrow: 1, height: '100vh', overflow: 'hidden', position: 'relative' }}>
             {/* 左侧内容区域与输入框 */}
             <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', mr: 2, minWidth: 0 }}>
                 <Paper
@@ -521,7 +592,7 @@ const AIGCPage = () => {
                         position="absolute"
                         top={16}
                         left="50%"
-                        sx={{ transform: 'translateX(-50%)' , zIndex: 10,top: 0,}}
+                        sx={{ transform: 'translateX(-50%)', zIndex: 10, top: 0, }}
                     >
                         <HoverSystemPrompt
                             systemPrompt={systemPrompt} // 传递 systemPrompt
