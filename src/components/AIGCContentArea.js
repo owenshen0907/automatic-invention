@@ -309,9 +309,20 @@ const AIGCContentArea = ({ messages, loading }) => {
                     return null;
                 }
 
-                // 分离图片文件和其他文件
-                const imageFiles = msg.files ? msg.files.filter(file => file.type === 'image') : [];
-                const otherFiles = msg.files ? msg.files.filter(file => file.type !== 'image') : [];
+                // 分离图片、视频文件和其他文件
+                const imageFiles = msg.files
+                    ? msg.files.filter(file => file.type.startsWith('image/'))
+                    : [];
+                const videoFiles = msg.files
+                    ? msg.files.filter(file => file.type.startsWith('video/'))
+                    : [];
+                const otherFiles = msg.files
+                    ? msg.files.filter(
+                        file =>
+                            !file.type.startsWith('image/') &&
+                            !file.type.startsWith('video/')
+                    )
+                    : [];
 
                 return (
                     <MessageContainer key={msg.id} sender={msg.sender}>
@@ -339,9 +350,16 @@ const AIGCContentArea = ({ messages, loading }) => {
                                     }}
                                 >
                                     {imageFiles.map((file, index) => (
-                                        <Box key={index} sx={{ position: 'relative', marginRight: 1, marginBottom: 1 }}>
+                                        <Box
+                                            key={index}
+                                            sx={{
+                                                position: 'relative',
+                                                marginRight: 1,
+                                                marginBottom: 1,
+                                            }}
+                                        >
                                             <img
-                                                src={file.local_url} // 使用本地 URL
+                                                src={file.local_url || file.file_web_path}
                                                 alt={file.name}
                                                 onError={(e) => {
                                                     if (e.target.src !== file.file_web_path) {
@@ -351,12 +369,52 @@ const AIGCContentArea = ({ messages, loading }) => {
                                                 style={{
                                                     maxWidth: '120px',
                                                     maxHeight: '120px',
-                                                    marginRight: 8,
-                                                    marginBottom: 8,
                                                     borderRadius: 4,
                                                     objectFit: 'cover',
                                                     boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                                                    cursor: 'pointer',
                                                 }}
+                                                onClick={() => {
+                                                    // Implement image click handler if needed (e.g., open in modal)
+                                                }}
+                                            />
+                                        </Box>
+                                    ))}
+                                </Box>
+                            )}
+
+                            {/* 视频文件 */}
+                            {videoFiles.length > 0 && (
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        flexWrap: 'wrap',
+                                        marginBottom: processedContent ? 1 : 0,
+                                    }}
+                                >
+                                    {videoFiles.map((file, index) => (
+                                        <Box
+                                            key={index}
+                                            sx={{
+                                                position: 'relative',
+                                                marginRight: 1,
+                                                marginBottom: 1,
+                                            }}
+                                        >
+                                            <video
+                                                src={file.local_url || file.file_web_path}
+                                                onError={(e) => {
+                                                    if (e.target.src !== file.file_web_path) {
+                                                        e.target.src = file.file_web_path; // 回退到 file_web_path
+                                                    }
+                                                }}
+                                                style={{
+                                                    maxWidth: '200px',
+                                                    maxHeight: '200px',
+                                                    borderRadius: 4,
+                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                                                }}
+                                                controls
                                             />
                                         </Box>
                                     ))}
@@ -400,9 +458,9 @@ const AIGCContentArea = ({ messages, loading }) => {
                                                     textAlign: 'center',
                                                 }}
                                             >
-                                                {file.type === 'video' ? (
+                                                {file.type.startsWith('video/') ? (
                                                     <video
-                                                        src={file.local_url} // 使用本地 URL
+                                                        src={file.local_url || file.file_web_path}
                                                         onError={(e) => {
                                                             if (e.target.src !== file.file_web_path) {
                                                                 e.target.src = file.file_web_path; // 回退到 file_web_path
@@ -418,13 +476,14 @@ const AIGCContentArea = ({ messages, loading }) => {
                                                         controls
                                                     />
                                                 ) : (
-                                                    <a href={file.url} target="_blank" rel="noopener noreferrer">
+                                                    <a href={file.file_web_path} target="_blank"
+                                                       rel="noopener noreferrer">
                                                         {fileIcon}
                                                     </a>
                                                 )}
                                                 <Typography variant="body2" sx={{ marginTop: 1 }}>
                                                     <a
-                                                        href={file.url}
+                                                        href={file.file_web_path}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         style={{ textDecoration: 'none', color: '#1976d2' }}

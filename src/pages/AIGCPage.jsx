@@ -159,9 +159,15 @@ const AIGCPage = () => {
         }
 
         // 创建包含必要信息的 files 数组，包括本地 URL 和 file_web_path
-        const files = selectedFiles.map(file => ({
+        // 首先，确保 uploadedFileDetails 和 selectedFiles 数量一致
+        if (uploadedFileDetails.length !== selectedFiles.length) {
+            console.error('文件数量不匹配');
+            return;
+        }
+        // 创建包含必要信息的 files 数组，包括本地 URL 和 file_web_path
+        const files = selectedFiles.map((file, index) => ({
             local_url: URL.createObjectURL(file), // 生成本地 URL
-            file_web_path: file.file_web_path, // 后端文件路径
+            file_web_path: uploadedFileDetails[index].file_web_path, // 后端文件路径
             name: file.name,
             type: file.type, // 包含文件类型
         }));
@@ -461,6 +467,17 @@ const AIGCPage = () => {
 
     // 在 messages、systemPrompt 和 performanceLevel 状态变化时保存当前对话、系统提示和性能级别
     useEffect(() => {
+        const messagesToSave = messages.map(msg => {
+            if (msg.files) {
+                const files = msg.files.map(file => ({
+                    file_web_path: file.file_web_path,
+                    name: file.name,
+                    type: file.type,
+                }));
+                return { ...msg, files };
+            }
+            return msg;
+        });
         localStorage.setItem('aigcCurrentMessages', JSON.stringify(messages));
         localStorage.setItem('aigcSystemPrompt', systemPrompt);
         localStorage.setItem('aigcPerformanceLevel', performanceLevel);
