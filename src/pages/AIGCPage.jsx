@@ -1,5 +1,4 @@
 // src/pages/AIGCPage.jsx
-
 import React, { useState, useContext, useEffect } from 'react';
 import {
     Box,
@@ -33,7 +32,7 @@ import { KnowledgeBaseContext } from '../context/KnowledgeBaseContext';
 
 const AIGCPage = () => {
     const [messages, setMessages] = useState([]); // 当前对话消息
-    const [loading, setLoading] = useState(false);//初始为空
+    const [loading, setLoading] = useState(false); // 初始为空
     const [error, setError] = useState(null);
     const [selectedPipeline, setSelectedPipeline] = useState(''); // 初始为空
     const [selectedKB, setSelectedKB] = useState(''); // 新增：选中的知识库 ID
@@ -41,7 +40,7 @@ const AIGCPage = () => {
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [snackbarSeverity, setSnackbarSeverity] = useState('success');
     const [enableWebSearch, setEnableWebSearch] = useState(false); // 新增: 是否启用联网搜索
-    const [selectedVectorFileIds, setSelectedVectorFileIds] = useState([]);//解析文档的文档ID数组
+    const [selectedVectorFileIds, setSelectedVectorFileIds] = useState([]); // 解析文档的文档ID数组
     const [enableMemory, setEnableMemory] = useState(true);
     const [systemPrompt, setSystemPrompt] = useState(''); // 父组件管理 systemPrompt 状态
 
@@ -150,6 +149,7 @@ const AIGCPage = () => {
     // 发送消息的处理函数
 
     const handleSend = async (inputValue, uploadedFileDetails, fileType, selectedFiles) => {
+        console.log('Uploaded File Details:', uploadedFileDetails);
         if (inputValue.trim() === '' && uploadedFileDetails.length === 0) {
             // 添加提示用户输入内容或选择文件
             setSnackbarMessage('请输入内容或选择文件后再发送。');
@@ -158,15 +158,10 @@ const AIGCPage = () => {
             return;
         }
 
-        // // 创建包含必要信息的 files 数组
-        // const files = selectedFiles.map(file => ({
-        //     url: URL.createObjectURL(file), // 或者使用实际上传后的文件 URL
-        //     name: file.name,
-        //     type: file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'file',
-        // }));
-        // 创建包含必要信息的 files 数组
+        // 创建包含必要信息的 files 数组，包括本地 URL 和 file_web_path
         const files = selectedFiles.map(file => ({
-            url: file.file_web_path, // 使用上传后的文件 URL
+            local_url: URL.createObjectURL(file), // 生成本地 URL
+            file_web_path: file.file_web_path, // 后端文件路径
             name: file.name,
             type: file.type, // 包含文件类型
         }));
@@ -211,7 +206,7 @@ const AIGCPage = () => {
                     text: inputValue.trim(),
                 });
             }
-            // 根据每个文件的类型添加相应的内容
+            // 根据每个文件的类型添加相应的内容，使用 file.type 而不是全局 fileType
             uploadedFileDetails.forEach(file => {
                 if (file.type === 'image') {
                     userPrompt.push({
@@ -238,7 +233,6 @@ const AIGCPage = () => {
                 }
             });
 
-
             // 构建调用 API 的请求数据
             const data = {
                 inputs: {},
@@ -259,7 +253,7 @@ const AIGCPage = () => {
                 },
             };
 
-            // 根据 fileType 设置 file_type 字段
+            // 根据文件类型设置 file_type 字段
             if (fileType === 'image') {
                 data.file_type = 'img';
             } else if (fileType === 'video') {
@@ -311,7 +305,7 @@ const AIGCPage = () => {
                 if (response.status === 501) {
                     throw new Error(`Pipeline "${selectedPipeline}" 暂未实现。`);
                 } else {
-                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                    throw new Error(`HTTP 错误！状态: ${response.status}, 信息: ${errorText}`);
                 }
             }
 
@@ -328,15 +322,15 @@ const AIGCPage = () => {
                     const lines = chunk.split('\n').filter(line => line.startsWith('data:'));
 
                     for (const line of lines) {
-                        console.log("Received line: ", line);
+                        console.log("接收到的行: ", line);
                         if (!line.startsWith('data:')) {
-                            console.log("Line does not start with 'data:', skipping...");
+                            console.log("该行不以 'data:' 开头，跳过...");
                             continue;
                         }
 
-                        // 使用正则表达式移除 'data:' 和可能的空格
+                        // 移除 'data:' 前缀和可能的空格
                         const jsonString = line.replace(/^data:\s*/, '');
-                        console.log("After removing 'data: ': ", jsonString);
+                        console.log("移除 'data: ' 后的字符串: ", jsonString);
 
                         if (jsonString === '[DONE]') {
                             doneReading = true;
@@ -344,14 +338,14 @@ const AIGCPage = () => {
                         }
 
                         if (jsonString === '') {
-                            console.log("Empty jsonString, skipping...");
+                            console.log("空的 jsonString，跳过...");
                             continue; // 跳过空的 jsonString
                         }
 
                         try {
                             const parsed = JSON.parse(jsonString);
-                            console.log("Parsed Response: ", parsed);
-                            // Capture model and usage from the response
+                            console.log("解析后的响应: ", parsed);
+                            // 捕获模型和使用情况
                             if (parsed.model) {
                                 capturedModel = parsed.model;
                             }
@@ -360,10 +354,10 @@ const AIGCPage = () => {
                                 capturedCompletionTokens = parsed.usage.completion_tokens;
                             }
 
-                            // 处理 parsed 对象
+                            // 处理解析后的对象
                             if (parsed.choices && parsed.choices[0].delta && parsed.choices[0].delta.content) {
                                 const content = parsed.choices[0].delta.content;
-                                console.log("Received content: ", content);
+                                console.log("接收到的内容: ", content);
 
                                 // 添加或更新机器人消息
                                 setMessages(prevMessages => {
@@ -422,6 +416,9 @@ const AIGCPage = () => {
             console.error(err);
             setError(`请求失败：${err.message}`);
             setLoading(false);
+            setSnackbarMessage(`请求失败：${err.message}`);
+            setSnackbarSeverity('error');
+            setSnackbarOpen(true);
         }
     };
 

@@ -65,7 +65,7 @@ const AIGCInputArea = ({ onSend }) => {
         setSnackbarOpen,
         onFileUploaded: (file) => {
             // 收集上传后的文件详情，包括 file_id 和 file_web_path
-            setUploadedFileDetails((prev) => [...prev, file]);
+            setUploadedFileDetails((prev) => [...prev, { ...file}]);
         },
         onClose: () => {
             // 上传完成后的回调，可以根据需要进行处理
@@ -133,7 +133,7 @@ const AIGCInputArea = ({ onSend }) => {
         setFileNames(processedFiles.map((file) => file.name));
         setFileDescriptions(processedFiles.map(() => ''));
 
-        await handleUploadFiles(processedFiles); // 不传递参数，使用 selectedFiles
+        await handleUploadFiles(processedFiles, 'image'); // 传递类型 'image'
     };
 
     const handleUploadFile = async (event) => {
@@ -164,7 +164,7 @@ const AIGCInputArea = ({ onSend }) => {
         setFileNames(files.map((file) => file.name));
         setFileDescriptions(files.map(() => ''));
 
-        await handleUploadFiles(files); // 不传递参数，使用 selectedFiles
+        await handleUploadFiles(files,'file'); // 不传递参数，使用 selectedFiles
     };
 
     // 新增 handleUploadVideo 方法
@@ -201,7 +201,7 @@ const AIGCInputArea = ({ onSend }) => {
         setFileNames([file.name]);
         setFileDescriptions(['']);
 
-        await handleUploadFiles([file]); // 使用钩子上传视频
+        await handleUploadFiles([file],'video'); // 使用钩子上传视频
     };
 
     const handleKeyDown = (event) => {
@@ -409,14 +409,6 @@ const AIGCInputArea = ({ onSend }) => {
                                         CSV（.csv）
                                         <br />
                                         HTML/XML（.html, .htm, .xml）
-                                        <br />
-                                        视频（.mp4）
-                                    </Typography>
-                                    <Typography variant="body2">
-                                        最多一次上传10个文件（图片除外，视频最多1个）
-                                    </Typography>
-                                    <Typography variant="body2">
-                                        单文件大小限制为64MB（图片单文件20MB，视频128MB）
                                     </Typography>
                                 </Box>
                             }

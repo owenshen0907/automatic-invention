@@ -339,19 +339,26 @@ const AIGCContentArea = ({ messages, loading }) => {
                                     }}
                                 >
                                     {imageFiles.map((file, index) => (
-                                        <img
-                                            key={index}
-                                            src={file.url} // 使用 file_web_path 作为图片源
-                                            alt={file.name}
-                                            style={{
-                                                maxWidth: '120px',
-                                                maxHeight: '120px',
-                                                marginRight: 8,
-                                                marginBottom: 8,
-                                                borderRadius: 4,
-                                                objectFit: 'cover',
-                                            }}
-                                        />
+                                        <Box key={index} sx={{ position: 'relative', marginRight: 1, marginBottom: 1 }}>
+                                            <img
+                                                src={file.local_url} // 使用本地 URL
+                                                alt={file.name}
+                                                onError={(e) => {
+                                                    if (e.target.src !== file.file_web_path) {
+                                                        e.target.src = file.file_web_path; // 回退到 file_web_path
+                                                    }
+                                                }}
+                                                style={{
+                                                    maxWidth: '120px',
+                                                    maxHeight: '120px',
+                                                    marginRight: 8,
+                                                    marginBottom: 8,
+                                                    borderRadius: 4,
+                                                    objectFit: 'cover',
+                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                                                }}
+                                            />
+                                        </Box>
                                     ))}
                                 </Box>
                             )}
@@ -395,13 +402,20 @@ const AIGCContentArea = ({ messages, loading }) => {
                                             >
                                                 {file.type === 'video' ? (
                                                     <video
-                                                        src={file.url}
-                                                        controls
+                                                        src={file.local_url} // 使用本地 URL
+                                                        onError={(e) => {
+                                                            if (e.target.src !== file.file_web_path) {
+                                                                e.target.src = file.file_web_path; // 回退到 file_web_path
+                                                            }
+                                                        }}
                                                         style={{
                                                             width: '100%',
                                                             height: 'auto',
                                                             borderRadius: 4,
+                                                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
                                                         }}
+                                                        muted
+                                                        controls
                                                     />
                                                 ) : (
                                                     <a href={file.url} target="_blank" rel="noopener noreferrer">

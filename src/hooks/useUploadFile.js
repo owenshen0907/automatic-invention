@@ -30,7 +30,7 @@ const useUploadFile = ({
     };
 
     // 将 filesToUpload 参数设为可选
-    const handleUploadFiles = async (filesToUpload) => {
+    const handleUploadFiles = async (filesToUpload, type) => { // 接受 type 参数
         console.log('handleUploadFiles called');
         const files = filesToUpload || selectedFiles; // 如果没有传入参数，使用 selectedFiles
         console.log('Files to upload:', files);
@@ -102,6 +102,7 @@ const useUploadFile = ({
                     onFileUploaded({
                         file_id: response.data.file_id,
                         file_web_path: response.data.file_web_path, // 传递 file_web_path
+                        type: type, // 传递 type
                     });
                 }
             } catch (error) {
