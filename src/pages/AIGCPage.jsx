@@ -229,14 +229,15 @@ const AIGCPage = () => {
                             url: file.file_web_path,
                         },
                     });
-                } else {
-                    userPrompt.push({
-                        type: 'file_url',
-                        file_url: {
-                            url: file.file_web_path,
-                        },
-                    });
                 }
+                // else {
+                //     userPrompt.push({
+                //         type: 'file_url',
+                //         file_url: {
+                //             url: file.file_web_path,
+                //         },
+                //     });
+                // }
             });
 
             // 构建调用 API 的请求数据
