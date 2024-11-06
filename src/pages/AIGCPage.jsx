@@ -289,7 +289,9 @@ const AIGCPage = () => {
                 apiUrl = process.env.REACT_APP_API_DIFY_URL;
             } else if (selectedPipeline === 'StepFun') {
                 apiUrl = process.env.REACT_APP_API_STEPFUN_URL;
-            } else {
+            } else if (selectedPipeline === 'ChatGPT') {
+                apiUrl = process.env.REACT_APP_API_CHATGPT_URL;
+            }else {
                 throw new Error('未选择有效的 Pipeline');
             }
 
