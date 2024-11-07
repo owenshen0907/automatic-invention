@@ -1,4 +1,3 @@
-// src/components/CreateKnowledgeBase.jsx
 import React, { useState } from 'react';
 import {
     Dialog,
@@ -14,7 +13,7 @@ import {
     Select,
     MenuItem,
     CircularProgress,
-    Typography // Import Typography
+    Typography
 } from '@mui/material';
 import axios from 'axios';
 
@@ -22,9 +21,7 @@ const CreateKnowledgeBase = ({
                                  open,
                                  onClose,
                                  onAddKnowledgeBase,
-                                 setSnackbarMessage,
-                                 setSnackbarSeverity,
-                                 setSnackbarOpen
+                                 setSnackbar
                              }) => {
     const [newKnowledgeBaseIdentifier, setNewKnowledgeBaseIdentifier] = useState('');
     const [newKnowledgeBaseDisplayName, setNewKnowledgeBaseDisplayName] = useState('');
@@ -37,30 +34,38 @@ const CreateKnowledgeBase = ({
     const handleAddTag = () => {
         const trimmedTag = newTag.trim();
         if (!trimmedTag) {
-            setSnackbarMessage('标签不能为空');
-            setSnackbarSeverity('error');
-            setSnackbarOpen(true);
+            setSnackbar({
+                open: true,
+                message: '标签不能为空',
+                severity: 'error'
+            });
             return;
         }
 
         if (trimmedTag.length > 6) {
-            setSnackbarMessage('标签最多6个汉字');
-            setSnackbarSeverity('error');
-            setSnackbarOpen(true);
+            setSnackbar({
+                open: true,
+                message: '标签最多6个汉字',
+                severity: 'error'
+            });
             return;
         }
 
         if (tags.length >= 4) {
-            setSnackbarMessage('最多只能添加4个标签');
-            setSnackbarSeverity('error');
-            setSnackbarOpen(true);
+            setSnackbar({
+                open: true,
+                message: '最多只能添加4个标签',
+                severity: 'error'
+            });
             return;
         }
 
         if (tags.includes(trimmedTag)) {
-            setSnackbarMessage('标签已存在');
-            setSnackbarSeverity('error');
-            setSnackbarOpen(true);
+            setSnackbar({
+                open: true,
+                message: '标签已存在',
+                severity: 'error'
+            });
             return;
         }
 
@@ -80,47 +85,59 @@ const CreateKnowledgeBase = ({
 
     const handleCreateKnowledgeBase = async () => {
         if (!newKnowledgeBaseIdentifier.trim()) {
-            setSnackbarMessage('知识库标识不能为空');
-            setSnackbarSeverity('error');
-            setSnackbarOpen(true);
+            setSnackbar({
+                open: true,
+                message: '知识库标识不能为空',
+                severity: 'error'
+            });
             return;
         }
 
         const identifierRegex = /^[a-zA-Z0-9][a-zA-Z0-9_]*$/;
         if (!identifierRegex.test(newKnowledgeBaseIdentifier.trim())) {
-            setSnackbarMessage('知识库标识只能包含字母、数字和下划线，且不能以下划线开头');
-            setSnackbarSeverity('error');
-            setSnackbarOpen(true);
+            setSnackbar({
+                open: true,
+                message: '知识库标识只能包含字母、数字和下划线，且不能以下划线开头',
+                severity: 'error'
+            });
             return;
         }
 
         if (!newKnowledgeBaseDisplayName.trim()) {
-            setSnackbarMessage('知识库名称不能为空');
-            setSnackbarSeverity('error');
-            setSnackbarOpen(true);
+            setSnackbar({
+                open: true,
+                message: '知识库名称不能为空',
+                severity: 'error'
+            });
             return;
         }
 
         if (tags.length > 4) {
-            setSnackbarMessage('最多只能添加4个标签');
-            setSnackbarSeverity('error');
-            setSnackbarOpen(true);
+            setSnackbar({
+                open: true,
+                message: '最多只能添加4个标签',
+                severity: 'error'
+            });
             return;
         }
 
         for (let tag of tags) {
             if (tag.length > 6) {
-                setSnackbarMessage('每个标签最多6个汉字');
-                setSnackbarSeverity('error');
-                setSnackbarOpen(true);
+                setSnackbar({
+                    open: true,
+                    message: '每个标签最多6个汉字',
+                    severity: 'error'
+                });
                 return;
             }
         }
 
         if (!selectedModel) {
-            setSnackbarMessage('请选择所属模型');
-            setSnackbarSeverity('error');
-            setSnackbarOpen(true);
+            setSnackbar({
+                open: true,
+                message: '请选择所属模型',
+                severity: 'error'
+            });
             return;
         }
 
@@ -133,7 +150,7 @@ const CreateKnowledgeBase = ({
                 description: newKnowledgeBaseDescription.trim(),
                 tags: tags.join(','),
                 model_owner: selectedModel
-            });
+            },{withCredentials: true,});
             if (response.status === 200 || response.status === 201) {
                 const newKnowledgeBase = response.data;
                 onAddKnowledgeBase({
@@ -150,16 +167,20 @@ const CreateKnowledgeBase = ({
                 setTags([]);
                 setSelectedModel('');
                 onClose();
-                setSnackbarMessage('知识库创建成功');
-                setSnackbarSeverity('success');
-                setSnackbarOpen(true);
+                setSnackbar({
+                    open: true,
+                    message: '知识库创建成功',
+                    severity: 'success'
+                });
             }
         } catch (error) {
             console.error('创建知识库失败:', error);
             const errorMessage = error.response?.data?.details || '创建知识库失败，请重试';
-            setSnackbarMessage(errorMessage);
-            setSnackbarSeverity('error');
-            setSnackbarOpen(true);
+            setSnackbar({
+                open: true,
+                message: errorMessage,
+                severity: 'error'
+            });
         } finally {
             setLoading(false);
         }
@@ -180,7 +201,6 @@ const CreateKnowledgeBase = ({
     return (
         <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
             <DialogTitle>创建知识库</DialogTitle>
-            {/* Added Instruction Prompt */}
             <DialogContent>
                 <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
                     【所属模型】支持阶跃，智普，月之暗面，百川提供的知识库接口。自定义：可以自选向量模型，并支持基于文件的RAG。
@@ -189,17 +209,16 @@ const CreateKnowledgeBase = ({
                     sx={{
                         display: 'flex',
                         gap: 2,
-                        flexWrap: 'nowrap', // Prevent wrapping
+                        flexWrap: 'nowrap',
                         alignItems: 'flex-start',
                         mt: 2
                     }}
                 >
-                    {/* 所属模型选择框 */}
                     <FormControl
                         margin="dense"
                         variant="outlined"
                         required
-                        sx={{flex: 1, minWidth: 200 }}
+                        sx={{ flex: 1, minWidth: 200 }}
                     >
                         <InputLabel id="select-model-label">所属模型 *</InputLabel>
                         <Select

@@ -98,7 +98,7 @@ const KnowledgeBaseManagement = ({
                 vectorStoreID: selectedKnowledgeBase.id // 新增: 传递 vectorStoreID
             };
 
-            const response = await axios.post(`${apiUrl}/api/trigger-external-upload`, payload);
+            const response = await axios.post(`${apiUrl}/api/trigger-external-upload`,{payload},{withCredentials:true} );
 
             if (response.status === 200) {
                 setSnackbar({

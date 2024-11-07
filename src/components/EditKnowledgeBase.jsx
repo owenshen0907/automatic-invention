@@ -87,7 +87,7 @@ const EditKnowledgeBase = ({
                 display_name: displayName.trim(),
                 description: description.trim(),
                 tags: tags.join(','), // 保存时包含标签
-            });
+            },{withCredentials: true});
             if (response.status === 200) {
                 const updatedKB = response.data;
                 onUpdateKnowledgeBase({

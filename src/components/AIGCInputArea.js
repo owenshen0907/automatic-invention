@@ -58,7 +58,7 @@ const AIGCInputArea = ({ onSend }) => {
         uploadProgresses,
         handleClose,
     } = useUploadFile({
-        knowledgeBaseId: 'local20241015145535', // vector_store_id
+        knowledgeBaseId: 'local', // vector_store_id
         modelOwner: 'local',
         setSnackbarMessage,
         setSnackbarSeverity,
