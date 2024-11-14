@@ -138,8 +138,8 @@ const AIGCInputArea = ({ onSend }) => {
 
     const handleUploadFile = async (event) => {
         const files = Array.from(event.target.files);
-        if (files.length > 10) {
-            alert('一次最多上传10个文件。');
+        if (files.length > 20) {
+            alert('一次最多上传20个文件。');
             return;
         }
 

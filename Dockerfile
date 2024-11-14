@@ -46,6 +46,9 @@ FROM node:20.18-alpine
 # 设置工作目录
 WORKDIR /app
 
+# **设置 npm 使用国内镜像源**
+RUN npm config set registry https://registry.npmmirror.com
+
 # 安装 serve 包用于提供静态文件服务
 RUN npm install -g serve
 
