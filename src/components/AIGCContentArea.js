@@ -15,8 +15,31 @@ import botAvatar from '../assets/bot-avatar.png'; // 机器人头像图片
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import DescriptionIcon from '@mui/icons-material/Description';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
 const fixedAvatarDistance = 6; // 6px
+
+
+// 定义呼吸圆圈动画样式
+const BreathingCircle = styled(Box)(({ theme }) => ({
+    width: 24,
+    height: 24,
+    borderRadius: '50%',
+    backgroundColor: '#1976d2',
+    animation: 'breathing 1.5s infinite',
+    margin: 'auto',
+    '@keyframes breathing': {
+        '0%, 100%': {
+            transform: 'scale(1)',
+            opacity: 0.6,
+        },
+        '50%': {
+            transform: 'scale(1.2)',
+            opacity: 1,
+        },
+    },
+}));
 
 // 定义消息容器样式
 const MessageContainer = styled(Box)(({ theme, sender }) => ({
@@ -29,7 +52,9 @@ const MessageContainer = styled(Box)(({ theme, sender }) => ({
 
 // 定义消息气泡样式
 const MessageBubble = styled(Box)(({ theme, sender }) => ({
-    maxWidth: sender === 'user' ? '70%' : '90%', // 统一70%宽度，可根据需求调整
+    // 设置不同发送者的宽度
+    maxWidth: sender === 'bot' ? '90%' : '70%', // bot 消息最大宽度为90%，user为70%
+    width: sender === 'bot' ? '100%' : 'auto', // bot 消息占满最大宽度，user消息根据内容自动调整
     padding: theme.spacing(1.5, 2),
     borderRadius: 12,
     backgroundColor: sender === 'user' ? '#f0f0f0' : '#ffffff', // 用户消息使用更浅的灰色，机器人消息使用白色
@@ -105,6 +130,7 @@ const AIGCContentArea = ({ messages, loading }) => {
     const scrollContainerRef = useRef(null); // 添加滚动容器引用
     const [copiedMessageId, setCopiedMessageId] = useState(null);
     const [copiedCodeIds, setCopiedCodeIds] = useState({}); // 存储已复制的代码块ID
+    const [botLoading, setBotLoading] = useState(false);
 
     // 使用 useLayoutEffect 确保在 DOM 更新后立即滚动
     useLayoutEffect(() => {
@@ -287,6 +313,17 @@ const AIGCContentArea = ({ messages, loading }) => {
     // 使用 useMemo 缓存过滤后的消息，提高性能
     const filteredMessages = useMemo(() => filterConsecutiveLineBreaks(messages), [messages]);
 
+
+    // 检测机器人是否正在加载
+    useEffect(() => {
+        const lastMessage = messages[messages.length - 1];
+        if (lastMessage?.sender === 'bot' && !lastMessage.content) {
+            setBotLoading(true);
+        } else {
+            setBotLoading(false);
+        }
+    }, [messages]);
+
     return (
         <Box
             ref={scrollContainerRef} // 绑定滚动容器引用
@@ -305,7 +342,7 @@ const AIGCContentArea = ({ messages, loading }) => {
                 // 预处理消息内容
                 const processedContent = preprocessContent(msg.content || '', msg.sender);
                 // 如果预处理后的内容为空，则不渲染该消息
-                if (processedContent.trim() === '' && msg.sender === 'bot') {
+                if (processedContent.trim() === '' && msg.sender === 'bot' && !botLoading) {
                     return null;
                 }
 
@@ -340,6 +377,10 @@ const AIGCContentArea = ({ messages, loading }) => {
                         />
                         {/* 消息气泡 */}
                         <MessageBubble sender={msg.sender}>
+                            {/* 显示呼吸动画 */}
+                            {botLoading && msg.sender === 'bot' && !msg.content && (
+                                <BreathingCircle />
+                            )}
                             {/* 图片缩略图 - 先渲染图片 */}
                             {imageFiles.length > 0 && (
                                 <Box
@@ -498,6 +539,7 @@ const AIGCContentArea = ({ messages, loading }) => {
                             )}
 
                             {/* 消息复制按钮 */}
+                            {!botLoading && processedContent && (
                             <CopyButtonContainer>
                                 <Tooltip title="复制内容">
                                     <IconButton
@@ -516,7 +558,7 @@ const AIGCContentArea = ({ messages, loading }) => {
                                     </IconButton>
                                 </Tooltip>
                             </CopyButtonContainer>
-
+                            )}
                             {/* 时间戳 */}
                             <Typography variant="caption" sx={{ display: 'block', marginTop: 1, color: 'text.secondary' }}>
                                 {msg.createdAt}

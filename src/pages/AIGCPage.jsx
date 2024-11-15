@@ -187,6 +187,16 @@ const AIGCPage = () => {
 
         setLoading(true);
         setError(null);
+        // 在开始请求之前，添加一个空的 bot 消息
+        setMessages(prevMessages => [
+            ...prevMessages,
+            {
+                id: nanoid(),
+                sender: 'bot',
+                content: '',
+                createdAt: new Date().toLocaleTimeString(),
+            },
+        ]);
 
         // 计算输入字数
         const inputCharacterCount = systemPrompt.trim().length +
