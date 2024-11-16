@@ -27,11 +27,8 @@ RUN npm config set registry https://registry.npmmirror.com && \
     npm set audit false && \
     npm set fund false
 
-# 更新 npm（如果确实需要更新）
-RUN npm install -g npm@10.9.0
-
-# 启用并准备 pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# 安装 pnpm
+RUN npm install -g pnpm
 
 # 复制 package.json 和 pnpm-lock.yaml
 COPY package.json pnpm-lock.yaml ./
@@ -39,8 +36,8 @@ COPY package.json pnpm-lock.yaml ./
 # 设置 pnpm 使用国内源
 RUN pnpm config set registry https://registry.npmmirror.com
 
-# 安装依赖，利用 BuildKit 的缓存挂载（需要启用 BuildKit）
-RUN --mount=type=cache,target=/root/.pnpm-store pnpm install --frozen-lockfile
+# 安装依赖
+RUN pnpm install --frozen-lockfile
 
 # 复制项目文件（只在依赖未更改时触发）
 COPY . .
