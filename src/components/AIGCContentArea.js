@@ -121,26 +121,7 @@ const AIGCContentArea = ({ messages, loading }) => {
         }
     }, [messages, loading]);
 
-    const checkClipboardPermission = async () => {
-        if (navigator.permissions) {
-            try {
-                const result = await navigator.permissions.query({ name: 'clipboard-write' });
-                return result.state === 'granted' || result.state === 'prompt';
-            } catch (err) {
-                console.error('权限查询失败:', err);
-                return false;
-            }
-        }
-        return false; // Permissions API 不支持
-    };
-
     const handleCopyText = async (text, identifier, type = 'message') => {
-        const hasPermission = await checkClipboardPermission();
-        if (!hasPermission) {
-            console.warn('没有复制权限');
-            // 可选：通知用户
-        }
-
         if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
             try {
                 await navigator.clipboard.writeText(text);
