@@ -8,29 +8,32 @@ import {
     InputLabel,
     Select,
     MenuItem,
-    FormControlLabel,
-    Switch,
     CircularProgress,
     Chip,
     Tooltip,
     IconButton,
-    ToggleButton,
-    ToggleButtonGroup,
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { styled } from '@mui/system';
 import { KnowledgeBaseContext } from '../context/KnowledgeBaseContext';
 import useKnowledgeBaseFiles from '../hooks/useKnowledgeBaseFiles';
+import pipelineConfig from '../config/pipelineConfig';
+import PerformanceLevelControl from './pipelineControls/PerformanceLevelControl';
+import WebSearchControl from './pipelineControls/WebSearchControl';
+import MemoryControl from './pipelineControls/MemoryControl';
+import CustomFeatureControl from './pipelineControls/CustomFeatureControl';
+import KnowledgeBaseSelection from './pipelineControls/KnowledgeBaseSelection';
+import FileSelection from './pipelineControls/FileSelection';
 
 const SidebarContainer = styled(Box)(({ theme }) => ({
     padding: theme.spacing(1),
     backgroundColor: theme.palette.background.default,
-    height: '100%', // 确保高度填满
-    width: 240, // 确保宽度与导航侧边栏一致
+    height: '100%',
+    width: 240,
     overflowY: 'auto',
-    display: 'flex',            // 使用 flex 布局
-    flexDirection: 'column',    // 使子元素垂直排列
-    alignItems: 'flex-start',       // 居中子元素
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
 }));
 
 const Header = styled(Box)(({ theme }) => ({
@@ -42,57 +45,14 @@ const Header = styled(Box)(({ theme }) => ({
 
 const FormControlStyled = styled(FormControl)(({ theme }) => ({
     backgroundColor: '#f9f9f9',
-    width: 190, // 确保选择框占满宽度
-    margin: '0 auto', // 水平居中
-}));
-
-
-const PerformanceToggleGroup = styled(ToggleButtonGroup)(({ theme }) => ({
-    marginBottom: theme.spacing(3),
     width: '100%',
-    display: 'flex',
-    justifyContent: 'space-between',
-}));
-
-const PerformanceToggleButton = styled(ToggleButton)(({ theme }) => ({
-    flex: 1,
-    margin: theme.spacing(0, 0.5),
-    border: '1px solid',
-    borderColor: theme.palette.grey[400],
-    borderRadius: theme.shape.borderRadius,
-    textTransform: 'none',
-    padding: theme.spacing(1),
-    minWidth: 0,
-    '&.Mui-selected': {
-        backgroundColor: theme.palette.success.main,
-        color: theme.palette.common.white,
-        borderColor: theme.palette.success.main,
-        '&:hover': {
-            backgroundColor: theme.palette.success.dark,
-        },
-    },
-    '&:not(.Mui-selected)': {
-        backgroundColor: theme.palette.grey[300],
-        color: theme.palette.text.primary,
-        '&:hover': {
-            backgroundColor: theme.palette.grey[400],
-        },
-    },
 }));
 
 const AIGCFunctionalitySidebar = ({
                                       selectedPipeline = '',
                                       onPipelineChange = () => {},
-                                      onKnowledgeBaseChange = () => {},
-                                      onWebSearchChange = () => {},
-                                      enableWebSearch = false,
-                                      onFileChange = () => {},
                                       setSnackbar = () => {},
                                       updateSnackbar = () => {},
-                                      enableMemory = true,
-                                      onMemoryChange = () => {},
-                                      performanceLevel, // 接收 performanceLevel 作为 prop
-                                      onPerformanceLevelChange, // 接收回调
                                   }) => {
     const { knowledgeBases, loading: kbLoading, refreshKnowledgeBases } = useContext(KnowledgeBaseContext);
     const [selectedKB, setSelectedKB] = useState('');
@@ -100,11 +60,11 @@ const AIGCFunctionalitySidebar = ({
     const [selectedFiles, setSelectedFiles] = useState([]);
     const { files, loading: filesLoading, fetchFiles } = useKnowledgeBaseFiles('local20241015145535', true, setSnackbar);
 
-    const handlePerformanceLevelChangeLocal = (event, newLevel) => {
-        if (newLevel !== null) {
-            onPerformanceLevelChange(newLevel);
-        }
-    };
+    // 管理 Pipeline 控件的状态
+    const [performanceLevel, setPerformanceLevel] = useState('balanced');
+    const [enableWebSearch, setEnableWebSearch] = useState(false);
+    const [enableMemory, setEnableMemory] = useState(true);
+    const [customFeatureEnabled, setCustomFeatureEnabled] = useState(false); // 新增状态
 
     useEffect(() => {
         const pipelineOptionsFromEnv = process.env.REACT_APP_PIPELINE_OPTIONS;
@@ -130,23 +90,27 @@ const AIGCFunctionalitySidebar = ({
     }, [selectedPipeline, onPipelineChange]);
 
     useEffect(() => {
-        if (selectedPipeline !== 'StepFun') {
+        // 根据选中的 Pipeline 重置相关状态
+        if (pipelineConfig[selectedPipeline]) {
+            // 初始化状态，根据需要可以添加更多逻辑
+            setPerformanceLevel('balanced');
+            setEnableWebSearch(false);
+            setEnableMemory(true);
+            setCustomFeatureEnabled(false);
+        } else {
+            // 如果 Pipeline 不存在配置，重置所有状态
             setSelectedKB('');
-            onKnowledgeBaseChange('');
-            onWebSearchChange(false);
-            onMemoryChange(true);
+            setEnableWebSearch(false);
+            setEnableMemory(true);
             setSelectedFiles([]);
-            onFileChange([]);
+            setCustomFeatureEnabled(false);
         }
-    }, [selectedPipeline, onKnowledgeBaseChange, onWebSearchChange, onMemoryChange, onFileChange]);
+    }, [selectedPipeline]);
 
     const handleKBChange = (event) => {
         const value = event.target.value;
         setSelectedKB(value);
-
-        if (onKnowledgeBaseChange) {
-            onKnowledgeBaseChange(value);
-        }
+        // 您可以在此处添加回调或其他逻辑
     };
 
     const handlePipelineChangeLocal = (event) => {
@@ -156,25 +120,11 @@ const AIGCFunctionalitySidebar = ({
         }
     };
 
-    const handleWebSearchToggle = (event) => {
-        const isEnabled = event.target.checked;
-        if (onWebSearchChange) {
-            onWebSearchChange(isEnabled);
-        }
-    };
-
-    const handleMemoryToggle = (event) => {
-        const isEnabled = event.target.checked;
-        if (onMemoryChange) {
-            onMemoryChange(isEnabled);
-        }
-    };
-
     const handleFileChangeLocal = (event) => {
         const { target: { value } } = event;
         const selectedIds = typeof value === 'string' ? value.split(',') : value;
         setSelectedFiles(selectedIds);
-        onFileChange(selectedIds);
+        // 您可以在此处添加回调或其他逻辑
     };
 
     const [refreshing, setRefreshing] = useState(false);
@@ -196,16 +146,6 @@ const AIGCFunctionalitySidebar = ({
         }
     };
 
-    const filteredKnowledgeBases = knowledgeBases
-        ? knowledgeBases.filter((kb) => kb.model_owner !== 'local')
-        : [];
-    const filteredFiles = files ? files.filter((file) => file.vector_file_id) : [];
-
-    useEffect(() => {
-        console.log('Selected KB:', selectedKB);
-    }, [selectedKB, filteredFiles]);
-
-
     return (
         <SidebarContainer>
             <Header>
@@ -225,7 +165,7 @@ const AIGCFunctionalitySidebar = ({
             </Header>
 
             {/* Pipeline 选择 */}
-            <Box sx={{ marginBottom: 3, width: '100%' }}>
+            <Box sx={{ marginBottom: 3, width: '85%' }}>
                 <FormControlStyled fullWidth variant="outlined" size="small">
                     <InputLabel id="pipeline-select-label">选择 Pipeline</InputLabel>
                     <Select
@@ -243,125 +183,60 @@ const AIGCFunctionalitySidebar = ({
                 </FormControlStyled>
             </Box>
 
-            {/* 条件渲染：仅当 Pipeline 为 'StepFun' 时显示 */}
-            {selectedPipeline === 'StepFun' && (
+            {/* 动态渲染 Pipeline 特有的控件 */}
+            {pipelineConfig[selectedPipeline] && (
                 <>
+                    {pipelineConfig[selectedPipeline].map((ControlComponent, index) => {
+                        let componentProps = {};
 
-                    {/* 知识库选择 */}
-                    <Box sx={{ marginBottom: 3 , width: '100%'}}>
-                        <FormControlStyled fullWidth variant="outlined" size="small">
-                            <InputLabel id="knowledge-base-select-label">选择知识库</InputLabel>
-                            <Select
-                                labelId="knowledge-base-select-label"
-                                value={selectedKB}
-                                onChange={handleKBChange}
-                                label="选择知识库"
-                                disabled={kbLoading}
-                            >
-                                <MenuItem value="">清除选择</MenuItem>
-                                {filteredKnowledgeBases.map((kb) => (
-                                    <MenuItem key={kb.id} value={kb.id}>
-                                        <Tooltip title={kb.description || '无描述'} placement="right" arrow>
-                                            <span>{kb.display_name}</span>
-                                        </Tooltip>
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControlStyled>
-                    </Box>
+                        // 根据组件类型传递不同的 props
+                        if (ControlComponent === KnowledgeBaseSelection) {
+                            componentProps = {
+                                selectedKB: selectedKB,
+                                onKBChange: handleKBChange,
+                                knowledgeBases: knowledgeBases,
+                                loading: kbLoading,
+                            };
+                        } else if (ControlComponent === FileSelection) {
+                            componentProps = {
+                                selectedFiles: selectedFiles,
+                                onFileChange: handleFileChangeLocal,
+                                files: files,
+                                loading: filesLoading,
+                            };
+                        } else if (ControlComponent === PerformanceLevelControl) {
+                            componentProps = {
+                                value: performanceLevel,
+                                onChange: (event, newValue) => {
+                                    if (newValue !== null) {
+                                        setPerformanceLevel(newValue);
+                                    }
+                                },
+                            };
+                        } else if (ControlComponent === WebSearchControl) {
+                            componentProps = {
+                                enableWebSearch: enableWebSearch,
+                                onWebSearchChange: setEnableWebSearch,
+                            };
+                        } else if (ControlComponent === MemoryControl) {
+                            componentProps = {
+                                enableMemory: enableMemory,
+                                onMemoryChange: setEnableMemory,
+                            };
+                        } else if (ControlComponent === CustomFeatureControl) {
+                            componentProps = {
+                                customFeatureEnabled: customFeatureEnabled,
+                                onCustomFeatureChange: setCustomFeatureEnabled,
+                            };
+                        }
 
-                    {/* 文件选择框，独立于知识库选择 */}
-                    <Box sx={{ marginBottom: 3 , width: '100%'}}>
-                        {filesLoading ? (
-                            <CircularProgress size={24} />
-                        ) : (
-                            <FormControlStyled fullWidth variant="outlined" size="small">
-                                <InputLabel id="file-select-label">选择文件</InputLabel>
-                                <Select
-                                    labelId="file-select-label"
-                                    multiple
-                                    value={selectedFiles}
-                                    onChange={handleFileChangeLocal}
-                                    label="选择文件"
-                                    renderValue={(selected) => (
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                            {selected.map((value) => {
-                                                const file = filteredFiles.find(f => f.vector_file_id === value);
-                                                return (
-                                                    <Chip key={value} label={file ? file.file_name : value} />
-                                                );
-                                            })}
-                                        </Box>
-                                    )}
-                                >
-                                    {filteredFiles.length > 0 ? (
-                                        filteredFiles.map((file) => (
-                                            <MenuItem key={file.vector_file_id} value={file.vector_file_id}>
-                                                {file.file_name}
-                                            </MenuItem>
-                                        ))
-                                    ) : (
-                                        <MenuItem value="" disabled>
-                                            无可用文件
-                                        </MenuItem>
-                                    )}
-                                </Select>
-                            </FormControlStyled>
-                        )}
-                    </Box>
-                    {/* 性能级别滑块 */}
-                    <Box sx={{ marginBottom: 1, width: '240' }}>
-                        <PerformanceToggleGroup
-                            value={performanceLevel}
-                            exclusive
-                            onChange={handlePerformanceLevelChangeLocal}
-                            aria-label="性能级别"
-                        >
-                            <Tooltip title="速度优先，适用娱乐聊天对话。" placement="top" arrow>
-                                <PerformanceToggleButton value="fast">
-                                    极速
-                                </PerformanceToggleButton>
-                            </Tooltip>
-                            <Tooltip title="千亿参数，适用大多数场景" placement="top" arrow>
-                                <PerformanceToggleButton value="balanced">
-                                    均衡
-                                </PerformanceToggleButton>
-                            </Tooltip>
-                            <Tooltip title="万亿参数，适合严密的逻辑推理，复杂的任务" placement="top" arrow>
-                                <PerformanceToggleButton value="advanced">
-                                    高级
-                                </PerformanceToggleButton>
-                            </Tooltip>
-                        </PerformanceToggleGroup>
-                    </Box>
-
-                    {/* 是否启用联网搜索 */}
-                    <Box sx={{ marginBottom: 1, width: 200 }}>
-                        <FormControlLabel
-                            control={
-                                <Switch
-                                    checked={enableWebSearch}
-                                    onChange={handleWebSearchToggle}
-                                    color="primary"
-                                />
-                            }
-                            label="是否启用联网"
-                        />
-                    </Box>
-
-                    {/* 是否启用记忆 */}
-                    <Box sx={{ marginBottom: 1, width: 200 }}>
-                        <FormControlLabel
-                            control={
-                                <Switch
-                                    checked={enableMemory}
-                                    onChange={handleMemoryToggle}
-                                    color="primary"
-                                />
-                            }
-                            label="是否启用记忆"
-                        />
-                    </Box>
+                        return (
+                            <ControlComponent
+                                key={`${ControlComponent.name}-${index}`}
+                                {...componentProps}
+                            />
+                        );
+                    })}
                 </>
             )}
         </SidebarContainer>
@@ -372,16 +247,8 @@ const AIGCFunctionalitySidebar = ({
 AIGCFunctionalitySidebar.propTypes = {
     selectedPipeline: PropTypes.string,
     onPipelineChange: PropTypes.func,
-    onKnowledgeBaseChange: PropTypes.func,
-    onWebSearchChange: PropTypes.func,
-    enableWebSearch: PropTypes.bool,
     setSnackbar: PropTypes.func,
     updateSnackbar: PropTypes.func,
-    onFileChange: PropTypes.func.isRequired,
-    enableMemory: PropTypes.bool,
-    onMemoryChange: PropTypes.func,
-    performanceLevel: PropTypes.oneOf(['fast', 'balanced', 'advanced']), // 新增
-    onPerformanceLevelChange: PropTypes.func.isRequired, // 新增
 };
 
 export default AIGCFunctionalitySidebar;

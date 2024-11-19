@@ -1,8 +1,8 @@
 // src/components/AIGCContentArea.jsx
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Typography, Box, Avatar, IconButton, Tooltip } from '@mui/material';
+import { Typography, Box, Avatar, IconButton, Tooltip,Button,Menu,MenuItem } from '@mui/material';
 import { styled } from '@mui/system';
-import { ContentCopy, CheckCircle } from '@mui/icons-material';
+import { ContentCopy, CheckCircle,Refresh } from '@mui/icons-material';
 import Markdown from 'markdown-to-jsx';
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomOneLight } from 'react-syntax-highlighter/dist/esm/styles/hljs';
@@ -45,6 +45,7 @@ const MessageContainer = styled(Box)(({ theme, sender }) => ({
 const MessageBubble = styled(Box)(({ theme, sender }) => ({
     maxWidth: sender === 'bot' ? '90%' : '70%',
     width: sender === 'bot' ? '100%' : 'auto',
+    minWidth: sender === 'user' ? '30%' : 'auto',
     padding: theme.spacing(1.5, 2),
     borderRadius: 12,
     backgroundColor: sender === 'user' ? '#f0f0f0' : '#ffffff',
@@ -55,6 +56,8 @@ const MessageBubble = styled(Box)(({ theme, sender }) => ({
     overflowX: 'auto',
     boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
     position: 'relative',
+    // 为按钮留出空间
+    paddingBottom: sender === 'bot' ? theme.spacing(4) : theme.spacing(1.5),
     '& pre': {
         whiteSpace: 'pre-wrap',
         wordWrap: 'break-word',
@@ -86,7 +89,13 @@ const MessageBubble = styled(Box)(({ theme, sender }) => ({
 const CopyButtonContainer = styled(Box)(({ theme }) => ({
     position: 'absolute',
     bottom: theme.spacing(0.5),
-    right: theme.spacing(0.5),
+    right: theme.spacing(4), // 留出空间给 Regenerate 按钮
+}));
+
+const RegenerateButtonContainer = styled(Box)(({ theme }) => ({
+    position: 'absolute',
+    bottom: theme.spacing(0.5),
+    right: theme.spacing(10), // 根据需要调整位置
 }));
 
 const CodeCopyButtonContainer = styled(Box)(({ theme }) => ({
@@ -94,6 +103,7 @@ const CodeCopyButtonContainer = styled(Box)(({ theme }) => ({
     top: theme.spacing(0.5),
     right: theme.spacing(0.5),
 }));
+
 
 const fileTypeIcons = {
     pdf: <PictureAsPdfIcon fontSize="large" color="action" />,
@@ -108,12 +118,15 @@ const fileTypeIcons = {
     default: <InsertDriveFileIcon fontSize="large" color="action" />,
 };
 
-const AIGCContentArea = ({ messages, loading }) => {
+const AIGCContentArea = ({ messages, loading,onRegenerate }) => {
     const contentEndRef = useRef(null);
     const scrollContainerRef = useRef(null);
     const [copiedMessageId, setCopiedMessageId] = useState(null);
     const [copiedCodeIds, setCopiedCodeIds] = useState({});
     const [botLoading, setBotLoading] = useState(false);
+
+    // 状态管理菜单
+    const [anchorEls, setAnchorEls] = useState({}); // { [msg.id]: anchorEl }
 
     useLayoutEffect(() => {
         if (scrollContainerRef.current) {
@@ -179,31 +192,45 @@ const AIGCContentArea = ({ messages, loading }) => {
         handleCopyText(text, codeId, 'code');
     };
 
+    // 处理菜单打开
+    const handleOpenMenu = (event, messageId) => {
+        setAnchorEls(prev => ({ ...prev, [messageId]: event.currentTarget }));
+    };
+
+    // 处理菜单关闭
+    const handleCloseMenu = (messageId) => {
+        setAnchorEls(prev => ({ ...prev, [messageId]: null }));
+    };
+
+    // 处理重新生成选项
+    const handleRegenerate = (messageId, option) => {
+        handleCloseMenu(messageId);
+        if (onRegenerate) {
+            onRegenerate(messageId, option);
+        }
+    };
+
     const markdownOptions = {
         overrides: {
-            code: {
-                component: ({ className, children, ...props }) => {
-                    const language = (className || '')
-                        .replace('lang-', '')
-                        .replace('language-', '');
-                    const codeText = Array.isArray(children)
-                        ? children.join('')
-                        : typeof children === 'string'
-                            ? children
-                            : ''; // 处理其他可能的类型
+            // 处理代码块
+            pre: {
+                component: ({ children, ...props }) => {
+                    const code = children.props.children;
+                    const match = /language-(\w+)/.exec(children.props.className || '');
+                    const language = match ? match[1] : '';
 
                     const codeId = `code-${Math.random().toString(36).substr(2, 9)}`;
                     return (
                         <Box key={codeId} sx={{ position: 'relative' }}>
                             <SyntaxHighlighter language={language} style={atomOneLight} {...props}>
-                                {codeText}
+                                {code}
                             </SyntaxHighlighter>
                             {/* 代码块复制按钮 */}
                             <CodeCopyButtonContainer>
                                 <Tooltip title="复制代码">
                                     <IconButton
                                         size="small"
-                                        onClick={() => handleCopyCode(codeText, codeId)}
+                                        onClick={() => handleCopyCode(code, codeId)}
                                         sx={{
                                             padding: '4px',
                                         }}
@@ -220,6 +247,22 @@ const AIGCContentArea = ({ messages, loading }) => {
                         </Box>
                     );
                 },
+            },
+            // 处理内联代码
+            code: {
+                component: ({ children, ...props }) => (
+                    <code
+                        {...props}
+                        style={{
+                            backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                            padding: '2px 4px',
+                            borderRadius: '4px',
+                            fontFamily: 'source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace',
+                        }}
+                    >
+                        {children}
+                    </code>
+                ),
             },
             a: {
                 component: ({ children, ...props }) => (
@@ -463,6 +506,37 @@ const AIGCContentArea = ({ messages, loading }) => {
                                         </IconButton>
                                     </Tooltip>
                                 </CopyButtonContainer>
+                            )}
+                            {/* 重新生成按钮 */}
+                            {msg.sender === 'bot' && (
+                                <RegenerateButtonContainer>
+                                    <Tooltip title="重新生成">
+                                        <IconButton
+                                            size="small"
+                                            onClick={(e) => handleOpenMenu(e, msg.id)}
+                                            aria-label="重新生成"
+                                        >
+                                            <Refresh />
+                                        </IconButton>
+                                    </Tooltip>
+                                    <Menu
+                                        anchorEl={anchorEls[msg.id]}
+                                        open={Boolean(anchorEls[msg.id])}
+                                        onClose={() => handleCloseMenu(msg.id)}
+                                        anchorOrigin={{
+                                            vertical: 'top',
+                                            horizontal: 'left',
+                                        }}
+                                        transformOrigin={{
+                                            vertical: 'bottom',
+                                            horizontal: 'left',
+                                        }}
+                                    >
+                                        <MenuItem onClick={() => handleRegenerate(msg.id, '极速')}>极速</MenuItem>
+                                        <MenuItem onClick={() => handleRegenerate(msg.id, '均衡')}>均衡</MenuItem>
+                                        <MenuItem onClick={() => handleRegenerate(msg.id, '高级')}>高级</MenuItem>
+                                    </Menu>
+                                </RegenerateButtonContainer>
                             )}
 
                             <Typography
