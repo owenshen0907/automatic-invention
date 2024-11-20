@@ -1,13 +1,12 @@
 // src/components/AIGCContentArea.jsx
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Typography, Box, Avatar, IconButton, Tooltip, Menu, MenuItem } from '@mui/material';
-import { styled } from '@mui/system';
+import { styled, keyframes } from '@mui/system';
 import { ContentCopy, CheckCircle, Refresh } from '@mui/icons-material';
 import Markdown from 'markdown-to-jsx';
-import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { atomOneLight } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import userAvatar from '../assets/user-avatar.png';
 import botAvatar from '../assets/bot-avatar.png';
+import CodeBlock from './CodeBlock'; // 引入独立的 CodeBlock 组件
 
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import DescriptionIcon from '@mui/icons-material/Description';
@@ -26,6 +25,28 @@ const fileTypeIcons = {
     md: <DescriptionIcon fontSize="large" color="action" />,
     default: <InsertDriveFileIcon fontSize="large" color="action" />,
 };
+
+// 定义呼吸动画
+const breathing = keyframes`
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+`;
+
+// 呼吸圆圈组件
+const BreathingCircle = styled(Box)(({ theme }) => ({
+    width: 24,
+    height: 24,
+    borderRadius: '50%',
+    backgroundColor: '#1976d2', // 蓝色
+    animation: `${breathing} 1.5s infinite`,
+    margin: 'auto',
+}));
 
 // 样式定义
 const fixedAvatarDistance = 6; // 6px
@@ -67,12 +88,6 @@ const RegenerateButtonContainer = styled(Box)(({ theme }) => ({
     right: theme.spacing(0.5), // 紧靠复制按钮
 }));
 
-const CodeCopyButtonContainer = styled(Box)(({ theme }) => ({
-    position: 'absolute',
-    top: theme.spacing(0.5),
-    right: theme.spacing(0.5),
-}));
-
 const IconButtonStyled = styled(IconButton)(({ theme }) => ({
     padding: '4px',
     color: theme.palette.text.secondary,
@@ -102,7 +117,6 @@ const AIGCContentArea = ({ messages, loading, onRegenerate }) => {
     const contentEndRef = useRef(null);
     const scrollContainerRef = useRef(null);
     const [copiedMessageId, setCopiedMessageId] = useState(null);
-    const [copiedCodeIds, setCopiedCodeIds] = useState({});
     const [botLoading, setBotLoading] = useState(false);
     const [isUserScrolling, setIsUserScrolling] = useState(false);
 
@@ -121,7 +135,7 @@ const AIGCContentArea = ({ messages, loading, onRegenerate }) => {
     useEffect(() => {
         const handleScroll = () => {
             if (scrollContainerRef.current) {
-                const {scrollTop, scrollHeight, clientHeight} = scrollContainerRef.current;
+                const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
                 const isAtBottom = scrollHeight - scrollTop - clientHeight < 50; // 阈值50px
                 setIsUserScrolling(!isAtBottom);
             }
@@ -139,32 +153,26 @@ const AIGCContentArea = ({ messages, loading, onRegenerate }) => {
         };
     }, []);
 
-    const handleCopyText = async (text, identifier, type = 'message') => {
+    const handleCopyText = async (text, messageId) => {
         if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
             try {
                 await navigator.clipboard.writeText(text);
-                if (type === 'message') {
-                    setCopiedMessageId(identifier);
-                    setTimeout(() => setCopiedMessageId(null), 2000);
-                } else if (type === 'code') {
-                    setCopiedCodeIds(prev => ({...prev, [identifier]: true}));
-                    setTimeout(() => setCopiedCodeIds(prev => ({...prev, [identifier]: false})), 2000);
-                }
+                setCopiedMessageId(messageId);
+                setTimeout(() => setCopiedMessageId(null), 2000);
             } catch (err) {
                 console.error('复制失败:', err);
-                fallbackCopyText(text, identifier, type);
+                fallbackCopyText(text, messageId);
             }
         } else {
-            fallbackCopyText(text, identifier, type);
+            fallbackCopyText(text, messageId);
         }
     };
 
-    const fallbackCopyText = (text, identifier, type) => {
+    const fallbackCopyText = (text, messageId) => {
         const textarea = document.createElement('textarea');
         textarea.value = text;
-        textarea.style.top = '0';
-        textarea.style.left = '0';
         textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
         document.body.appendChild(textarea);
         textarea.focus();
         textarea.select();
@@ -172,13 +180,8 @@ const AIGCContentArea = ({ messages, loading, onRegenerate }) => {
         try {
             const successful = document.execCommand('copy');
             if (successful) {
-                if (type === 'message') {
-                    setCopiedMessageId(identifier);
-                    setTimeout(() => setCopiedMessageId(null), 2000);
-                } else if (type === 'code') {
-                    setCopiedCodeIds(prev => ({...prev, [identifier]: true}));
-                    setTimeout(() => setCopiedCodeIds(prev => ({...prev, [identifier]: false})), 2000);
-                }
+                setCopiedMessageId(messageId);
+                setTimeout(() => setCopiedMessageId(null), 2000);
             } else {
                 console.error('复制失败: execCommand 不成功');
             }
@@ -190,21 +193,17 @@ const AIGCContentArea = ({ messages, loading, onRegenerate }) => {
     };
 
     const handleCopyMessage = (text, messageId) => {
-        handleCopyText(text, messageId, 'message');
-    };
-
-    const handleCopyCode = (text, codeId) => {
-        handleCopyText(text, codeId, 'code');
+        handleCopyText(text, messageId);
     };
 
     // 处理菜单打开
     const handleOpenMenu = (event, messageId) => {
-        setAnchorEls(prev => ({...prev, [messageId]: event.currentTarget}));
+        setAnchorEls(prev => ({ ...prev, [messageId]: event.currentTarget }));
     };
 
     // 处理菜单关闭
     const handleCloseMenu = (messageId) => {
-        setAnchorEls(prev => ({...prev, [messageId]: null}));
+        setAnchorEls(prev => ({ ...prev, [messageId]: null }));
     };
 
     // 处理重新生成选项
@@ -226,47 +225,24 @@ const AIGCContentArea = ({ messages, loading, onRegenerate }) => {
         overrides: {
             // 处理代码块
             pre: {
-                component: ({children, ...props}) => {
+                component: ({ children, ...props }) => {
                     const code = children.props.children;
                     const match = /language-(\w+)/.exec(children.props.className || '');
                     const language = match ? match[1] : '';
 
-                    const codeId = `code-${Math.random().toString(36).substr(2, 9)}`;
-                    return (
-                        <Box key={codeId} sx={{position: 'relative'}}>
-                            <SyntaxHighlighter language={language} style={atomOneLight} PreTag="div" {...props}>
-                                {code}
-                            </SyntaxHighlighter>
-                            {/* 代码块复制按钮 */}
-                            <CodeCopyButtonContainer>
-                                <Tooltip title="复制代码">
-                                    <IconButtonStyled
-                                        size="small"
-                                        onClick={() => handleCopyCode(code, codeId)}
-                                        aria-label="复制代码"
-                                    >
-                                        {copiedCodeIds[codeId] ? (
-                                            <CheckCircle fontSize="small" color="success"/>
-                                        ) : (
-                                            <ContentCopy fontSize="small"/>
-                                        )}
-                                    </IconButtonStyled>
-                                </Tooltip>
-                            </CodeCopyButtonContainer>
-                        </Box>
-                    );
+                    return <CodeBlock code={code} language={language} />;
                 },
             },
             // 处理内联代码
             code: {
-                component: ({children, ...props}) => (
+                component: ({ children, ...props }) => (
                     <code
                         {...props}
                         style={{
                             backgroundColor: 'rgba(0, 0, 0, 0.05)',
                             padding: '2px 4px',
                             borderRadius: '4px',
-                            fontFamily: 'Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans, sans-serif',
+                            fontFamily: 'Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans, sans-serif', // 统一字体
                         }}
                     >
                         {children}
@@ -275,7 +251,7 @@ const AIGCContentArea = ({ messages, loading, onRegenerate }) => {
             },
             // 处理链接
             a: {
-                component: ({children, ...props}) => (
+                component: ({ children, ...props }) => (
                     <a
                         {...props}
                         style={{
@@ -291,7 +267,7 @@ const AIGCContentArea = ({ messages, loading, onRegenerate }) => {
             },
             // 处理段落
             p: {
-                component: ({children, ...props}) => (
+                component: ({ children, ...props }) => (
                     <Typography
                         variant="body1"
                         component="p"
@@ -308,15 +284,15 @@ const AIGCContentArea = ({ messages, loading, onRegenerate }) => {
             },
             // 处理列表项
             li: {
-                component: ({children, ...props}) => (
-                    <li style={{marginBottom: '0.1em'}} {...props}>
+                component: ({ children, ...props }) => (
+                    <li style={{ marginBottom: '0.1em' }} {...props}>
                         {children}
                     </li>
                 ),
             },
             // 处理标题 h1
             h1: {
-                component: ({children, ...props}) => (
+                component: ({ children, ...props }) => (
                     <Typography
                         variant="h6" // 使用较小的标题级别
                         component="h1"
@@ -333,7 +309,7 @@ const AIGCContentArea = ({ messages, loading, onRegenerate }) => {
             },
             // 处理标题 h2
             h2: {
-                component: ({children, ...props}) => (
+                component: ({ children, ...props }) => (
                     <Typography
                         variant="subtitle1" // 使用较小的标题级别
                         component="h2"
@@ -407,22 +383,7 @@ const AIGCContentArea = ({ messages, loading, onRegenerate }) => {
                         />
                         <MessageBubble sender={msg.sender}>
                             {botLoading && msg.sender === 'bot' && !msg.content && (
-                                <Box sx={{
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    height: '100%'
-                                }}>
-                                    <Box
-                                        sx={{
-                                            width: 24,
-                                            height: 24,
-                                            borderRadius: '50%',
-                                            backgroundColor: '#1976d2',
-                                            animation: 'breathing 1.5s infinite',
-                                        }}
-                                    />
-                                </Box>
+                                <BreathingCircle />
                             )}
                             {imageFiles.length > 0 && (
                                 <Box
@@ -540,12 +501,12 @@ const AIGCContentArea = ({ messages, loading, onRegenerate }) => {
                                                 <a href={file.file_web_path} target="_blank" rel="noopener noreferrer">
                                                     {fileIcon}
                                                 </a>
-                                                <Typography variant="body2" sx={{marginTop: 1}}>
+                                                <Typography variant="body2" sx={{ marginTop: 1 }}>
                                                     <a
                                                         href={file.file_web_path}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        style={{textDecoration: 'none', color: '#1976d2'}}
+                                                        style={{ textDecoration: 'none', color: '#1976d2' }}
                                                     >
                                                         {file.name}
                                                     </a>
@@ -565,9 +526,9 @@ const AIGCContentArea = ({ messages, loading, onRegenerate }) => {
                                             aria-label="复制内容"
                                         >
                                             {copiedMessageId === msg.id ? (
-                                                <CheckCircle fontSize="small" color="success"/>
+                                                <CheckCircle fontSize="small" color="success" />
                                             ) : (
-                                                <ContentCopy fontSize="small"/>
+                                                <ContentCopy fontSize="small" />
                                             )}
                                         </IconButtonStyled>
                                     </Tooltip>
@@ -582,7 +543,7 @@ const AIGCContentArea = ({ messages, loading, onRegenerate }) => {
                                             onClick={(e) => handleOpenMenu(e, msg.id)}
                                             aria-label="重新生成"
                                         >
-                                            <Refresh/>
+                                            <Refresh />
                                         </IconButtonStyled>
                                     </Tooltip>
                                     <Menu
@@ -607,13 +568,13 @@ const AIGCContentArea = ({ messages, loading, onRegenerate }) => {
 
                             <Typography
                                 variant="caption"
-                                sx={{display: 'block', marginTop: 1, color: 'text.secondary'}}
+                                sx={{ display: 'block', marginTop: 1, color: 'text.secondary' }}
                             >
                                 {msg.createdAt}
                             </Typography>
 
                             {msg.sender === 'bot' && msg.model && (
-                                <Box sx={{marginTop: 1}}>
+                                <Box sx={{ marginTop: 1 }}>
                                     <Typography variant="caption" color="text.secondary">
                                         模型: {msg.model}
                                     </Typography>
@@ -635,8 +596,9 @@ const AIGCContentArea = ({ messages, loading, onRegenerate }) => {
                     </MessageContainer>
                 );
             })}
-            <div ref={contentEndRef}/>
+            <div ref={contentEndRef} />
         </Box>
     );
 };
+
 export default AIGCContentArea;
