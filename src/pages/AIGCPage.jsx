@@ -96,20 +96,27 @@ const AIGCPage = () => {
     };
 
     // 处理性能级别变化
-    const handlePerformanceLevelChange = (newLevel) => {
-        setPerformanceLevel(newLevel);
-        // 显示通知或其他逻辑
-        setSnackbar(`性能级别已设置为 "${getPerformanceLabel(newLevel)}"。`, 'info');
+    // const handlePerformanceLevelChange = (newLevel) => {
+    //     setPerformanceLevel(newLevel);
+    //     // 显示通知或其他逻辑
+    //     setSnackbar(`性能级别已设置为 "${getPerformanceLabel(newLevel)}"。`, 'info');
+    // };
+    // 新增：处理性能级别变化
+    const handlePerformanceLevelChange = (event, newLevel) => {
+        if (newLevel !== null) {
+            setPerformanceLevel(newLevel);
+            setSnackbar(`性能级别已设置为 "${getPerformanceLabel(newLevel)}"。`, 'info');
+        }
     };
     // 辅助函数：根据性能级别值获取标签
     const getPerformanceLabel = (level) => {
         switch (level) {
             case 'fast':
-                return '极速';
+                return '中杯';
             case 'balanced':
-                return '均衡';
+                return '大杯';
             case 'advanced':
-                return '高级';
+                return '超大';
             default:
                 return '';
         }
@@ -328,106 +335,164 @@ const AIGCPage = () => {
                 }
             }
 
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder('utf-8');
-            let doneReading = false;
+            // 检查响应是否为流式（EventStream）响应
+            const contentType = response.headers.get('content-type');
+            const isEventStream = contentType && contentType.includes('text/event-stream');
 
-            while (!doneReading) {
-                const { value, done } = await reader.read();
-                doneReading = done;
-                if (value) {
-                    const chunk = decoder.decode(value, { stream: true });
+            if (isEventStream) {
+                // 处理流式响应
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let doneReading = false;
 
-                    const lines = chunk.split('\n').filter(line => line.startsWith('data:'));
+                while (!doneReading) {
+                    const { value, done } = await reader.read();
+                    doneReading = done;
+                    if (value) {
+                        const chunk = decoder.decode(value, { stream: true });
 
-                    for (const line of lines) {
-                        console.log("接收到的行: ", line);
-                        if (!line.startsWith('data:')) {
-                            console.log("该行不以 'data:' 开头，跳过...");
-                            continue;
-                        }
+                        const lines = chunk.split('\n').filter(line => line.startsWith('data:'));
 
-                        // 移除 'data:' 前缀和可能的空格
-                        const jsonString = line.replace(/^data:\s*/, '');
-                        console.log("移除 'data: ' 后的字符串: ", jsonString);
-
-                        if (jsonString === '[DONE]') {
-                            doneReading = true;
-                            break;
-                        }
-
-                        if (jsonString === '') {
-                            console.log("空的 jsonString，跳过...");
-                            continue; // 跳过空的 jsonString
-                        }
-
-                        try {
-                            const parsed = JSON.parse(jsonString);
-                            console.log("解析后的响应: ", parsed);
-                            // 捕获模型和使用情况
-                            if (parsed.model) {
-                                capturedModel = parsed.model;
-                            }
-                            if (parsed.usage) {
-                                capturedPromptTokens = parsed.usage.prompt_tokens;
-                                capturedCompletionTokens = parsed.usage.completion_tokens;
+                        for (const line of lines) {
+                            console.log("接收到的行: ", line);
+                            if (!line.startsWith('data:')) {
+                                console.log("该行不以 'data:' 开头，跳过...");
+                                continue;
                             }
 
-                            // 处理解析后的对象
-                            if (parsed.choices && parsed.choices[0].delta && parsed.choices[0].delta.content) {
-                                const content = parsed.choices[0].delta.content;
-                                console.log("接收到的内容: ", content);
+                            const jsonString = line.replace(/^data:\s*/, '');
+                            console.log("移除 'data: ' 后的字符串: ", jsonString);
 
-                                // 添加或更新机器人消息
-                                setMessages(prevMessages => {
-                                    const lastMessage = prevMessages[prevMessages.length - 1];
-                                    if (lastMessage && lastMessage.sender === 'bot') {
-                                        // 更新最后一条机器人消息
-                                        return prevMessages.map(msg =>
-                                            msg.id === lastMessage.id
-                                                ? { ...msg, content: msg.content + content }
-                                                : msg
-                                        );
-                                    } else {
-                                        // 添加新的机器人消息
-                                        return [
-                                            ...prevMessages,
-                                            {
-                                                id: nanoid(),
-                                                sender: 'bot',
-                                                content: content,
-                                                createdAt: new Date().toLocaleTimeString(),
-                                            }
-                                        ];
-                                    }
-                                });
+                            if (jsonString === '[DONE]') {
+                                doneReading = true;
+                                break;
+                            }
 
-                                // 动态更新最后一条机器人消息的额外字段
-                                setMessages(prevMessages => {
-                                    const lastMessage = prevMessages[prevMessages.length - 1];
-                                    if (lastMessage && lastMessage.sender === 'bot') {
-                                        return prevMessages.map(msg =>
-                                            msg.id === lastMessage.id
-                                                ? {
-                                                    ...msg,
-                                                    model: capturedModel,
-                                                    inputCharacterCount: inputCharacterCount,
-                                                    inputTokenCount: capturedPromptTokens,
-                                                    outputCharacterCount: msg.content ? msg.content.length : 0,
-                                                    outputTokenCount: capturedCompletionTokens,
+                            if (jsonString === '') {
+                                console.log("空的 jsonString，跳过...");
+                                continue;
+                            }
+
+                            try {
+                                const parsed = JSON.parse(jsonString);
+                                console.log("解析后的响应: ", parsed);
+                                // 捕获模型和使用情况
+                                if (parsed.model) {
+                                    capturedModel = parsed.model;
+                                }
+                                if (parsed.usage) {
+                                    capturedPromptTokens = parsed.usage.prompt_tokens;
+                                    capturedCompletionTokens = parsed.usage.completion_tokens;
+                                }
+
+                                // 处理解析后的对象
+                                if (parsed.choices && parsed.choices[0].delta && parsed.choices[0].delta.content) {
+                                    const content = parsed.choices[0].delta.content;
+                                    console.log("接收到的内容: ", content);
+
+                                    // 添加或更新机器人消息
+                                    setMessages(prevMessages => {
+                                        const lastMessage = prevMessages[prevMessages.length - 1];
+                                        if (lastMessage && lastMessage.sender === 'bot') {
+                                            // 更新最后一条机器人消息
+                                            return prevMessages.map(msg =>
+                                                msg.id === lastMessage.id
+                                                    ? { ...msg, content: msg.content + content }
+                                                    : msg
+                                            );
+                                        } else {
+                                            // 添加新的机器人消息
+                                            return [
+                                                ...prevMessages,
+                                                {
+                                                    id: nanoid(),
+                                                    sender: 'bot',
+                                                    content: content,
+                                                    createdAt: new Date().toLocaleTimeString(),
                                                 }
-                                                : msg
-                                        );
-                                    }
-                                    return prevMessages;
-                                });
+                                            ];
+                                        }
+                                    });
+
+                                    // 动态更新最后一条机器人消息的额外字段
+                                    setMessages(prevMessages => {
+                                        const lastMessage = prevMessages[prevMessages.length - 1];
+                                        if (lastMessage && lastMessage.sender === 'bot') {
+                                            return prevMessages.map(msg =>
+                                                msg.id === lastMessage.id
+                                                    ? {
+                                                        ...msg,
+                                                        model: capturedModel,
+                                                        inputCharacterCount: inputCharacterCount,
+                                                        inputTokenCount: capturedPromptTokens,
+                                                        outputCharacterCount: msg.content ? msg.content.length : 0,
+                                                        outputTokenCount: capturedCompletionTokens,
+                                                    }
+                                                    : msg
+                                            );
+                                        }
+                                        return prevMessages;
+                                    });
+                                }
+                            } catch (err) {
+                                console.error('解析 JSON 失败:', err);
+                                console.error('原始 JSON 字符串:', jsonString);
                             }
-                        } catch (err) {
-                            console.error('解析 JSON 失败:', err);
-                            console.error('原始 JSON 字符串:', jsonString);
                         }
                     }
                 }
+            } else {
+                // 处理非流式响应
+                const responseData = await response.json();
+                console.log('非流式响应数据:', responseData);
+
+                // 捕获模型和使用情况
+                if (responseData.model) {
+                    capturedModel = responseData.model;
+                }
+                if (responseData.usage) {
+                    capturedPromptTokens = responseData.usage.prompt_tokens;
+                    capturedCompletionTokens = responseData.usage.completion_tokens;
+                }
+
+                // 提取内容
+                const assistantContent = responseData.choices[0].message.content;
+
+                // 更新最后一条机器人消息
+                setMessages(prevMessages => {
+                    const lastMessage = prevMessages[prevMessages.length - 1];
+                    if (lastMessage && lastMessage.sender === 'bot') {
+                        return prevMessages.map(msg =>
+                            msg.id === lastMessage.id
+                                ? {
+                                    ...msg,
+                                    content: assistantContent,
+                                    model: capturedModel,
+                                    inputCharacterCount: inputCharacterCount,
+                                    inputTokenCount: capturedPromptTokens,
+                                    outputCharacterCount: assistantContent.length,
+                                    outputTokenCount: capturedCompletionTokens,
+                                }
+                                : msg
+                        );
+                    } else {
+                        // 如果没有机器人消息，添加新的
+                        return [
+                            ...prevMessages,
+                            {
+                                id: nanoid(),
+                                sender: 'bot',
+                                content: assistantContent,
+                                createdAt: new Date().toLocaleTimeString(),
+                                model: capturedModel,
+                                inputCharacterCount: inputCharacterCount,
+                                inputTokenCount: capturedPromptTokens,
+                                outputCharacterCount: assistantContent.length,
+                                outputTokenCount: capturedCompletionTokens,
+                            }
+                        ];
+                    }
+                });
             }
 
             setLoading(false);

@@ -53,6 +53,8 @@ const AIGCFunctionalitySidebar = ({
                                       onPipelineChange = () => {},
                                       setSnackbar = () => {},
                                       updateSnackbar = () => {},
+                                      performanceLevel = 'fast', // 新增
+                                      onPerformanceLevelChange = () => {}, // 新增
                                   }) => {
     const { knowledgeBases, loading: kbLoading, refreshKnowledgeBases } = useContext(KnowledgeBaseContext);
     const [selectedKB, setSelectedKB] = useState('');
@@ -61,7 +63,7 @@ const AIGCFunctionalitySidebar = ({
     const { files, loading: filesLoading, fetchFiles } = useKnowledgeBaseFiles('local20241015145535', true, setSnackbar);
 
     // 管理 Pipeline 控件的状态
-    const [performanceLevel, setPerformanceLevel] = useState('balanced');
+    // const [performanceLevel, setPerformanceLevel] = useState('balanced');
     const [enableWebSearch, setEnableWebSearch] = useState(false);
     const [enableMemory, setEnableMemory] = useState(true);
     const [customFeatureEnabled, setCustomFeatureEnabled] = useState(false); // 新增状态
@@ -93,7 +95,7 @@ const AIGCFunctionalitySidebar = ({
         // 根据选中的 Pipeline 重置相关状态
         if (pipelineConfig[selectedPipeline]) {
             // 初始化状态，根据需要可以添加更多逻辑
-            setPerformanceLevel('balanced');
+            // setPerformanceLevel('balanced');
             setEnableWebSearch(false);
             setEnableMemory(true);
             setCustomFeatureEnabled(false);
@@ -206,12 +208,8 @@ const AIGCFunctionalitySidebar = ({
                             };
                         } else if (ControlComponent === PerformanceLevelControl) {
                             componentProps = {
-                                value: performanceLevel,
-                                onChange: (event, newValue) => {
-                                    if (newValue !== null) {
-                                        setPerformanceLevel(newValue);
-                                    }
-                                },
+                                value: performanceLevel, // 使用来自父组件的 performanceLevel
+                                onChange: onPerformanceLevelChange, // 使用来自父组件的回调
                             };
                         } else if (ControlComponent === WebSearchControl) {
                             componentProps = {
@@ -249,6 +247,8 @@ AIGCFunctionalitySidebar.propTypes = {
     onPipelineChange: PropTypes.func,
     setSnackbar: PropTypes.func,
     updateSnackbar: PropTypes.func,
+    performanceLevel: PropTypes.oneOf(['fast', 'balanced', 'advanced']).isRequired, // 新增
+    onPerformanceLevelChange: PropTypes.func.isRequired, // 新增
 };
 
 export default AIGCFunctionalitySidebar;

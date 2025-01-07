@@ -46,19 +46,19 @@ const PerformanceLevelControl = ({ value, onChange }) => {
                 onChange={onChange}
                 aria-label="性能级别"
             >
-                <Tooltip title="速度优先，适用娱乐聊天对话。" placement="top" arrow>
+                <Tooltip title="均衡，多模，适用娱乐聊天对话（类比4o-mini）" placement="top" arrow>
                     <PerformanceToggleButton value="fast">
-                        极速
+                        中杯
                     </PerformanceToggleButton>
                 </Tooltip>
-                <Tooltip title="千亿参数，适用大多数场景" placement="top" arrow>
+                <Tooltip title="高智商，善于逻辑推理，科学计算，扣钉（类比o1)" placement="top" arrow>
                     <PerformanceToggleButton value="balanced">
-                        均衡
+                        大杯
                     </PerformanceToggleButton>
                 </Tooltip>
-                <Tooltip title="万亿参数，适合严密的逻辑推理，复杂的任务" placement="top" arrow>
+                <Tooltip title="超强（o1-pro)" placement="top" arrow>
                     <PerformanceToggleButton value="advanced">
-                        高级
+                        超大
                     </PerformanceToggleButton>
                 </Tooltip>
             </PerformanceToggleGroup>
